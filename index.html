@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEMI Medical System Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .gradient-bg {
+            background: radial-gradient(circle at top right, rgba(225, 29, 72, 0.15), transparent 60%),
+                        radial-gradient(circle at bottom left, rgba(79, 70, 229, 0.1), transparent 60%);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 min-h-screen text-white p-8 gradient-bg">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-4xl font-bold mb-2 text-center text-rose-500">STEMI Medical System</h1>
+        <p class="text-slate-400 text-center mb-12">Select your role to access the secure dashboard:</p>
+        
+        <div class="grid gap-6">
+            <a href="day9_dashboard.html" class="glass-card p-6 rounded-2xl hover:border-rose-500 hover:shadow-[0_0_20px_rgba(225,29,72,0.1)] transition-all duration-300 flex items-center justify-between group">
+                <div>
+                    <h2 class="text-xl font-bold">Doctor's Emergency Hub</h2>
+                    <p class="text-slate-400">Cardiology dispatch and telemetry monitoring.</p>
+                </div>
+                <span class="text-rose-500 transform group-hover:translate-x-2 transition-transform">→</span>
+            </a>
+
+            <a href="day11_family_dashboard.html" class="glass-card p-6 rounded-2xl hover:border-indigo-500 hover:shadow-[0_0_20px_rgba(79,70,229,0.1)] transition-all duration-300 flex items-center justify-between group">
+                <div>
+                    <h2 class="text-xl font-bold">Family Portal</h2>
+                    <p class="text-slate-400">Emergency status and location tracking.</p>
+                </div>
+                <span class="text-indigo-500 transform group-hover:translate-x-2 transition-transform">→</span>
+            </a>
+
+            <a href="day12_patient_dashboard.html" class="glass-card p-6 rounded-2xl hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all duration-300 flex items-center justify-between group">
+                <div>
+                    <h2 class="text-xl font-bold">Patient Monitor</h2>
+                    <p class="text-slate-400">Self-monitoring and emergency instructions.</p>
+                </div>
+                <span class="text-emerald-500 transform group-hover:translate-x-2 transition-transform">→</span>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
