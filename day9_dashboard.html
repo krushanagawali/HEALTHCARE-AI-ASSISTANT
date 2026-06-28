@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardiology Emergency Hub</title>
+    <!-- We use Tailwind CSS via a CDN for fast, professional styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Socket.IO library from a highly reliable CDN (cdnjs) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; }
+        
+        /* A custom animation for the glowing red alert */
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+        }
+        .emergency-pulse {
+            animation: pulse-red 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8 font-sans">
+
+    <!-- Top Navigation Bar -->
+    <header class="flex justify-between items-center border-b border-slate-700 pb-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-white">🏥 Central Cardiology Hub</h1>
+            <p class="text-slate-400 mt-1">Live Telemetry & Ambulance Dispatch</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span class="relative flex h-3 w-3">
+              <span id="ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span id="solid-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span id="connection-status" class="text-emerald-400 font-semibold tracking-wider">SYSTEM ONLINE</span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main>
+        <!-- The "Idle" state when no emergencies are active -->
+        <div id="idle-state" class="flex flex-col items-center justify-center py-20 text-slate-500">
+            <svg class="w-24 h-24 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="text-xl">Monitoring all active wearables...</h2>
+            <p class="mt-2">Waiting for distress signals from the Middleman Server.</p>
+            
+            <button onclick="triggerSimulatedAlert()" class="mt-10 px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded text-sm text-slate-300 border border-slate-700 transition">
+                [Dev Tool] Simulate Watch Trigger
+            </button>
+        </div>
+
+        <!-- The "Emergency Alert" Box (Hidden by default) -->
+        <div id="alert-state" class="hidden">
+            <div class="bg-red-950/40 border border-red-500 rounded-xl p-8 emergency-pulse">
+                <div class="flex justify-between items-start mb-6">
+                    <h2 class="text-4xl font-extrabold text-red-500 tracking-tight">🚨 INCOMING STEMI ALERT</h2>
+                    <span id="timestamp" class="text-red-300 font-mono text-lg"></span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Patient Data Panel -->
+                    <div class="bg-slate-900 rounded-lg p-6 border border-slate-700">
+                        <h3 class="text-xl font-semibold text-slate-300 mb-4 border-b border-slate-700 pb-2">Patient Details</h3>
+                        <div class="space-y-3 font-mono text-lg">
+                            <p><span class="text-slate-500">ID:</span> <span id="dash-id" class="text-white font-bold"></span></p>
+                            <p><span class="text-slate-500">AI Danger Score:</span> <span id="dash-score" class="text-red-400 font-bold"></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Dispatch Data Panel -->
+                    <div class="bg-slate-900 rounded-lg p-6 border border-slate-700 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xl font-semibold text-slate-300 mb-4 border-b border-slate-700 pb-2">GPS Location</h3>
+                            <p id="dash-loc" class="text-white font-mono text-lg mb-6"></p>
+                        </div>
+                        
+                        <!-- The crucial "Accept" button for the hospital staff -->
+                        <button onclick="dispatchAmbulance()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-4 rounded-lg text-xl shadow-lg transition transform hover:scale-105">
+                            DISPATCH AMBULANCE
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Success message after dispatch -->
+    <div id="dispatch-success" class="hidden fixed bottom-10 right-10 bg-emerald-600 text-white px-8 py-4 rounded-lg shadow-2xl text-lg font-bold">
+        ✅ Ambulance dispatched.
+    </div>
+
+    <script>
+        // ==========================================
+        // LIVE SERVER CONNECTION (Socket.IO)
+        // ==========================================
+        
+        let socket; // Declare socket globally so the dispatch function can use it
+
+        // Safe check: Prevent crash if the CDN is blocked
+        if (typeof io !== 'undefined') {
+            // Connect to our Middleman Python Server
+            socket = io('https://stemi-healtcare-ai.onrender.com');
+
+            socket.on('connect', () => {
+                console.log("Connected to Middleman Server successfully!");
+                document.getElementById('connection-status').innerText = "SERVER CONNECTED";
+                document.getElementById('connection-status').classList.replace('text-emerald-400', 'text-blue-400');
+                document.getElementById('ping-dot').classList.replace('bg-emerald-400', 'bg-blue-400');
+                document.getElementById('solid-dot').classList.replace('bg-emerald-500', 'bg-blue-500');
+            });
+
+            // Listen for the 'stemi_alert' from Python
+            socket.on('stemi_alert', (data) => {
+                console.log("RECEIVED EMERGENCY PAYLOAD:", data);
+                
+                document.getElementById('idle-state').classList.add('hidden');
+                document.getElementById('alert-state').classList.remove('hidden');
+
+                document.getElementById('dash-id').innerText = data.patient_id;
+                document.getElementById('dash-loc').innerText = data.gps_location;
+                document.getElementById('dash-score').innerText = data.danger_score + " / 1.0 (CRITICAL)";
+                
+                const now = new Date();
+                document.getElementById('timestamp').innerText = now.toLocaleTimeString();
+                
+                let audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                audio.play().catch(e => console.log("Audio play blocked by browser:", e));
+            });
+        } else {
+            console.error("Socket.IO library failed to load.");
+            document.getElementById('connection-status').innerText = "OFFLINE (LIB ERROR)";
+            document.getElementById('connection-status').classList.replace('text-emerald-400', 'text-red-500');
+            document.getElementById('ping-dot').classList.add('hidden');
+            document.getElementById('solid-dot').classList.replace('bg-emerald-500', 'bg-red-600');
+        }
+
+        // ==========================================
+        // UI FUNCTIONS
+        // ==========================================
+
+        function triggerSimulatedAlert() {
+            document.getElementById('idle-state').classList.add('hidden');
+            document.getElementById('alert-state').classList.remove('hidden');
+            document.getElementById('dash-id').innerText = "PT-208";
+            document.getElementById('dash-loc').innerText = "20.7002° N, 77.0082° E (Akola, Maharashtra)";
+            document.getElementById('dash-score').innerText = "0.85 / 1.0 (CRITICAL)";
+            document.getElementById('timestamp').innerText = new Date().toLocaleTimeString();
+        }
+
+        function dispatchAmbulance() {
+            const btn = document.querySelector('button[onclick="dispatchAmbulance()"]');
+            btn.innerText = "DISPATCHING...";
+            btn.classList.replace('bg-red-600', 'bg-slate-600');
+            btn.classList.replace('hover:bg-red-500', 'hover:bg-slate-600');
+            
+            setTimeout(() => {
+                document.getElementById('dispatch-success').classList.remove('hidden');
+                btn.innerText = "AMBULANCE EN ROUTE";
+                
+                // ==========================================
+                // THE NEW ADDITION: Tell the Server we Dispatched!
+                // ==========================================
+                if (socket) {
+                    socket.emit('doctor_dispatched');
+                }
+                
+                // Privacy: Delete the patient record from the screen automatically after dispatch
+                setTimeout(() => {
+                    document.getElementById('alert-state').classList.add('hidden');
+                    document.getElementById('idle-state').classList.remove('hidden');
+                    document.getElementById('dispatch-success').classList.add('hidden');
+                    btn.innerText = "DISPATCH AMBULANCE";
+                    btn.classList.replace('bg-slate-600', 'bg-red-600');
+                    btn.classList.replace('hover:bg-slate-600', 'hover:bg-red-500');
+                }, 5000); 
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

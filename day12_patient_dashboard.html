@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Health Monitor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Socket.IO library for real-time connection -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; } 
+        
+        @keyframes pulse-soft-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
+        }
+        .patient-alert-pulse {
+            animation: pulse-soft-red 2.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6 sm:p-10 font-sans flex flex-col items-center">
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full max-w-2xl flex justify-between items-center border-b border-slate-800 pb-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-white">❤️ My Health Monitor</h1>
+            <p class="text-slate-400 mt-1">ID: <span class="font-bold text-white">PT-208</span></p>
+        </div>
+        <div class="flex items-center space-x-3 bg-slate-900 px-4 py-2 rounded-full border border-slate-700">
+            <span class="relative flex h-3 w-3">
+              <span id="ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span id="solid-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span id="connection-status" class="text-emerald-400 font-semibold text-sm tracking-wider">SYSTEM ACTIVE</span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="w-full max-w-2xl">
+        
+        <!-- The "Idle" state -->
+        <div id="idle-state" class="bg-slate-900/80 rounded-3xl p-12 border border-slate-800 text-center shadow-xl">
+            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 mb-8">
+                <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+            </div>
+            <h2 class="text-3xl font-semibold text-white mb-2">Your heart looks great.</h2>
+            <p class="text-slate-400 text-lg">Your wearable is continuously analyzing your rhythm. You are safe and protected.</p>
+
+            <!-- LIVE EXACT GPS DISPLAY -->
+            <div class="mt-8 p-5 bg-slate-800/80 rounded-xl border border-slate-700 inline-block shadow-inner">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Your Device's Exact Live Location</p>
+                <div class="flex flex-col items-center justify-center space-y-1">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <p id="live-gps-display" class="text-yellow-400 font-mono text-lg animate-pulse">Acquiring GPS Permission...</p>
+                    </div>
+                    <p id="gps-accuracy" class="text-xs text-slate-500 hidden">Accuracy rating loading...</p>
+                </div>
+            </div>
+
+            <!-- DEV TRIGGER BUTTON -->
+            <div class="mt-8 border-t border-slate-800 pt-8">
+                <button onclick="triggerRealLocationSOS()" class="w-full sm:w-auto px-6 py-4 bg-red-950/60 hover:bg-red-900/80 border border-red-800 text-red-300 rounded-xl transition font-bold shadow-lg hover:shadow-red-900/20">
+                    [Dev Tool] Broadcast Exact Location SOS
+                </button>
+                <p class="text-slate-500 text-sm mt-3 px-4">Clicking this acts as the "Fake Watch" detecting a STEMI. It instantly blasts your real browser coordinates to the Server, Doctor, and Family.</p>
+            </div>
+        </div>
+
+        <!-- The "Emergency Alert" Box (Hidden by default) -->
+        <div id="alert-state" class="hidden">
+            <!-- Large, highly readable alert box for the patient -->
+            <div class="bg-red-950 border-2 border-red-500 rounded-3xl p-8 sm:p-12 patient-alert-pulse shadow-2xl text-center">
+                
+                <h2 class="text-4xl sm:text-5xl font-extrabold text-red-500 tracking-tight mb-4">HELP IS ON THE WAY</h2>
+                <p class="text-red-200 text-xl sm:text-2xl mb-10">We detected an anomaly. Your medical team and family have been notified.</p>
+                
+                <!-- Live Ambulance Status -->
+                <div class="bg-black/40 rounded-2xl p-6 border border-red-900/50 mb-10">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Emergency Status</h3>
+                    <div id="ambulance-status" class="flex flex-col items-center justify-center text-yellow-400 animate-pulse">
+                        <svg id="ambulance-icon" class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span id="ambulance-text" class="text-2xl font-bold text-center">Coordinating with Hospital...</span>
+                    </div>
+                </div>
+
+                <!-- Critical Instructions Checklist -->
+                <div class="text-left bg-slate-900 rounded-2xl p-6 border border-slate-700">
+                    <h3 class="text-lg font-bold text-white mb-4 border-b border-slate-700 pb-2">🚨 What you need to do right now:</h3>
+                    <ul class="space-y-4 text-lg text-slate-300">
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-slate-800 text-white font-bold mr-4">1</span>
+                            <span><strong>Sit or lie down</strong> in a comfortable position immediately. Do not walk around.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-slate-800 text-white font-bold mr-4">2</span>
+                            <span><strong>Unlock your front door</strong> so paramedics can enter quickly.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-slate-800 text-white font-bold mr-4">3</span>
+                            <span><strong>Stay calm and breathe.</strong> Do NOT attempt to drive yourself to the hospital.</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ==========================================
+        // REAL-TIME EXACT BROWSER GEOLOCATION
+        // ==========================================
+        let currentRealLocation = "Acquiring GPS...";
+
+        if ("geolocation" in navigator) {
+            // Using watchPosition so if the patient is moving, the location updates dynamically
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    // Grab EXACT full-precision coordinates
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy; // Accuracy in meters
+                    
+                    // Format specifically as "lat, lng" so Google Maps pins it flawlessly for the Family and Doctor
+                    currentRealLocation = `${lat}, ${lng}`;
+                    
+                    const gpsDisplay = document.getElementById('live-gps-display');
+                    const accDisplay = document.getElementById('gps-accuracy');
+                    
+                    // Display slightly rounded numbers visually so it doesn't overflow, but send exact data to server
+                    gpsDisplay.innerText = `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`;
+                    gpsDisplay.classList.remove('animate-pulse', 'text-yellow-400');
+                    gpsDisplay.classList.add('text-emerald-400');
+                    
+                    accDisplay.innerText = `GPS Accuracy: Within ${Math.round(accuracy)} meters`;
+                    accDisplay.classList.remove('hidden');
+                },
+                (error) => {
+                    console.error("Geolocation error:", error.message || error);
+                    // FALLBACK: When running in iframes or environments where location is blocked,
+                    // we provide a simulated fallback so the dashboard can still be tested!
+                    currentRealLocation = "20.7002, 77.0082";
+                    
+                    const gpsDisplay = document.getElementById('live-gps-display');
+                    gpsDisplay.innerText = "20.7002°, 77.0082° (Simulated)";
+                    gpsDisplay.classList.remove('animate-pulse', 'text-yellow-400');
+                    gpsDisplay.classList.add('text-blue-400');
+                    
+                    const accDisplay = document.getElementById('gps-accuracy');
+                    accDisplay.innerText = `GPS Accuracy: Simulated for testing`;
+                    accDisplay.classList.remove('hidden');
+                },
+                // Force high accuracy to use GPS hardware instead of basic IP matching
+                { enableHighAccuracy: true, maximumAge: 0 }
+            );
+        } else {
+            document.getElementById('live-gps-display').innerText = "Geolocation not supported by browser";
+        }
+
+        // ==========================================
+        // SOCKET.IO CONNECTION
+        // ==========================================
+        if (typeof io !== 'undefined') {
+            // Connect to the exact same Python Middleman Server
+            const socket = io('https://stemi-healtcare-ai.onrender.com');
+
+            socket.on('connect', () => {
+                console.log("Connected to Server!");
+            });
+
+            // Listen for the EXACT same alert
+            socket.on('stemi_alert', (data) => {
+                console.log("EMERGENCY DETECTED:", data);
+                
+                // Hide idle, show alert
+                document.getElementById('idle-state').classList.add('hidden');
+                document.getElementById('alert-state').classList.remove('hidden');
+
+                resetAmbulanceStatus();
+
+                // Play a loud alert sound to wake or alert the patient
+                let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
+                audio.play().catch(e => console.log("Audio play blocked by browser:", e));
+            });
+
+            // Listen for the hospital to dispatch the ambulance
+            socket.on('ambulance_dispatched', () => {
+                console.log("HOSPITAL DISPATCHED AMBULANCE!");
+                
+                const statusDiv = document.getElementById('ambulance-status');
+                const icon = document.getElementById('ambulance-icon');
+                const text = document.getElementById('ambulance-text');
+
+                // Change visual from yellow pulse to solid green
+                statusDiv.classList.replace('text-yellow-400', 'text-emerald-400');
+                statusDiv.classList.remove('animate-pulse');
+                
+                // Change clock icon to a siren/truck icon
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 17.5A2.5 2.5 0 0116.5 20h-9A2.5 2.5 0 015 17.5m14 0V9a2 2 0 00-2-2h-3.5L12 4.5M5 17.5V11a2 2 0 012-2h1.5l1.5-2.5m-5 11a2.5 2.5 0 01-2.5-2.5V11"></path>';
+                
+                // Update text to be reassuring
+                text.innerText = "AMBULANCE EN ROUTE!";
+            });
+
+        } else {
+            document.getElementById('connection-status').innerText = "OFFLINE";
+            document.getElementById('connection-status').classList.replace('text-emerald-400', 'text-red-500');
+            document.getElementById('ping-dot').classList.add('hidden');
+            document.getElementById('solid-dot').classList.replace('bg-emerald-500', 'bg-red-600');
+        }
+
+        // ==========================================
+        // BROWSER-BASED DISTRESS TRIGGER
+        // ==========================================
+        function triggerRealLocationSOS() {
+            if (currentRealLocation.includes("Acquiring") || currentRealLocation.includes("Denied")) {
+                alert("Please allow Location Access in your browser before simulating the SOS!");
+                return;
+            }
+
+            // Act as the Watch: Send the real location payload directly to our Python server
+            const payload = {
+                "patient_id": "PT-208",
+                "gps_location": currentRealLocation, // This is now full precision data
+                "danger_score": 0.95,
+                "token": "my-secret-watch-token"
+            };
+
+            fetch('https://stemi-healtcare-ai.onrender.com/emergency_dispatch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                console.log("Exact location SOS successfully fired to the server!");
+            })
+            .catch(error => {
+                console.error("Error sending SOS:", error);
+                alert("Failed to reach server. Make sure day7_middleman_server.py is running!");
+            });
+        }
+
+        // Helper function to reset the UI if another alert comes in
+        function resetAmbulanceStatus() {
+            const statusDiv = document.getElementById('ambulance-status');
+            const icon = document.getElementById('ambulance-icon');
+            const text = document.getElementById('ambulance-text');
+
+            statusDiv.className = "flex flex-col items-center justify-center text-yellow-400 animate-pulse";
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+            text.innerText = "Coordinating with Hospital...";
+        }
+    </script>
+</body>
+</html>

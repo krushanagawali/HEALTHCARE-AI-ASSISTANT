@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Health Monitor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Socket.IO library for real-time connection -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <style>
+        body { background-color: #1e1b4b; color: #f8fafc; } /* Deep purple/blue background for a softer feel */
+        
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+        }
+        .emergency-pulse {
+            animation: pulse-red 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8 font-sans flex flex-col items-center">
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full max-w-3xl flex justify-between items-center border-b border-indigo-900 pb-4 mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-white">👨‍👩‍👧 Family Portal</h1>
+            <p class="text-indigo-300 mt-1">Live Wearable Tracking for: <span class="font-bold text-white">PT-208</span></p>
+        </div>
+        <div class="flex items-center space-x-3 bg-indigo-950 px-4 py-2 rounded-full border border-indigo-800">
+            <span class="relative flex h-3 w-3">
+              <span id="ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span id="solid-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span id="connection-status" class="text-emerald-400 font-semibold text-sm tracking-wider">WATCH CONNECTED</span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="w-full max-w-3xl">
+        
+        <!-- The "Idle" state -->
+        <div id="idle-state" class="bg-indigo-950/50 rounded-2xl p-10 border border-indigo-900 text-center shadow-xl">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-900 mb-6">
+                <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+            </div>
+            <h2 class="text-2xl font-semibold text-indigo-100">Heart rate is normal.</h2>
+            <p class="text-indigo-400 mt-2">The AI is continuously monitoring the wearable. No action required.</p>
+        </div>
+
+        <!-- The "Session Closed" state for privacy -->
+        <div id="resolved-state" class="hidden bg-slate-900 rounded-2xl p-10 border border-slate-700 text-center shadow-xl mt-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-800 mb-6">
+                <!-- Privacy Lock Icon -->
+                <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <h2 id="resolved-title" class="text-2xl font-semibold text-white">Data Secured</h2>
+            <p id="resolved-message" class="text-slate-400 mt-2">For patient privacy and security, live telemetry has been disconnected and purged from this device.</p>
+        </div>
+
+        <!-- The "Emergency Alert" Box (Hidden by default) -->
+        <div id="alert-state" class="hidden">
+            <div class="bg-red-950/80 border-2 border-red-500 rounded-2xl p-8 emergency-pulse shadow-2xl">
+                <div class="text-center mb-8 border-b border-red-800 pb-6">
+                    <h2 class="text-3xl font-extrabold text-red-400 tracking-tight mb-2">🚨 MEDICAL EMERGENCY DETECTED</h2>
+                    <p class="text-red-200 text-lg">The wearable has detected a critical anomaly.</p>
+                    <span id="timestamp" class="text-red-400 font-mono text-sm mt-4 block"></span>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Status Updates Panel -->
+                    <div class="bg-black/40 rounded-xl p-6 border border-red-900/50">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Live System Actions</h3>
+                        
+                        <ul class="space-y-4">
+                            <li class="flex items-center text-emerald-400">
+                                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                <span>Distress signal sent to Central Cardiology Hub</span>
+                            </li>
+                            <li class="flex items-center text-emerald-400">
+                                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                <span>GPS Coordinates locked and transmitted</span>
+                            </li>
+                            <li id="ambulance-status" class="flex items-center text-yellow-400 animate-pulse">
+                                <svg id="ambulance-icon" class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span id="ambulance-text">Waiting for Hospital to dispatch Ambulance...</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- GPS Data Panel -->
+                    <div class="bg-black/40 rounded-xl p-6 border border-red-900/50">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Location & Routing Details</h3>
+                        
+                        <!-- Patient Location -->
+                        <div class="mb-4">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Patient Location (Origin)</p>
+                            <p id="dash-loc" class="text-white font-mono text-lg"></p>
+                        </div>
+
+                        <!-- Hospital Location -->
+                        <div class="mb-4 border-t border-slate-800 pt-4">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Dispatched Hospital (Destination)</p>
+                            <p id="dash-hospital" class="text-emerald-400 font-mono text-lg"></p>
+                        </div>
+                        
+                        <!-- Embedded Exact Location Map -->
+                        <div id="map-container" class="w-full h-64 rounded-lg overflow-hidden border border-red-900/50 mb-6 hidden">
+                            <!-- We use an iframe designed to show the route between two points -->
+                            <iframe id="location-map" width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src=""></iframe>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col sm:flex-row gap-4 mt-4">
+                            <button onclick="openMaps()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition shadow-lg">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                Directions in Maps
+                            </button>
+                            <button onclick="copyLocation()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition shadow-lg">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                Copy Locations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Floating Notification -->
+    <div id="toast-notification" class="hidden fixed top-10 right-10 bg-emerald-500 text-white px-6 py-3 rounded shadow-lg font-bold z-50">
+        Locations copied to clipboard!
+    </div>
+
+    <script>
+        let currentGpsLocation = "";
+        
+        // Define a target hospital to show the routing capability
+        const hospitalLocation = "Civil Hospital, Akola, Maharashtra"; 
+
+        // Safe check for Socket.IO
+        if (typeof io !== 'undefined') {
+            const socket = io('https://stemi-healtcare-ai.onrender.com');
+
+            socket.on('connect', () => {
+                console.log("Connected to Server!");
+            });
+
+            socket.on('stemi_alert', (data) => {
+                console.log("EMERGENCY PAYLOAD:", data);
+                
+                // Save the GPS string for the buttons to use
+                currentGpsLocation = data.gps_location;
+                
+                // Hide idle, show alert
+                document.getElementById('idle-state').classList.add('hidden');
+                document.getElementById('resolved-state').classList.add('hidden');
+                document.getElementById('alert-state').classList.remove('hidden');
+
+                // Populate data
+                document.getElementById('dash-loc').innerText = data.gps_location;
+                document.getElementById('dash-hospital').innerText = hospitalLocation;
+                document.getElementById('timestamp').innerText = "Event Time: " + new Date().toLocaleTimeString();
+                
+                // Show route between patient and hospital on embedded map
+                const mapFrame = document.getElementById('location-map');
+                const mapContainer = document.getElementById('map-container');
+                
+                // Construct a routing URL using saddr (source) and daddr (destination)
+                mapFrame.src = `https://maps.google.com/maps?saddr=${encodeURIComponent(data.gps_location)}&daddr=${encodeURIComponent(hospitalLocation)}&t=&z=13&ie=UTF8&output=embed`;
+                mapContainer.classList.remove('hidden');
+
+                resetAmbulanceStatus();
+
+                let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
+                audio.play().catch(e => console.log("Audio play blocked by browser:", e));
+            });
+
+            socket.on('ambulance_dispatched', () => {
+                console.log("HOSPITAL DISPATCHED AMBULANCE!");
+                
+                const statusLi = document.getElementById('ambulance-status');
+                const icon = document.getElementById('ambulance-icon');
+                const text = document.getElementById('ambulance-text');
+
+                statusLi.classList.replace('text-yellow-400', 'text-emerald-400');
+                statusLi.classList.remove('animate-pulse');
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
+                text.innerText = "Ambulance dispatched and en route!";
+
+                // Hide the live GPS and alert data 10 seconds after dispatch if they haven't manually closed it
+                setTimeout(() => {
+                    if (!document.getElementById('alert-state').classList.contains('hidden')) {
+                        triggerPrivacyLock("Ambulance dispatched and en route.");
+                    }
+                }, 10000);
+            });
+
+        } else {
+            document.getElementById('connection-status').innerText = "OFFLINE";
+            document.getElementById('connection-status').classList.replace('text-emerald-400', 'text-red-500');
+            document.getElementById('ping-dot').classList.add('hidden');
+            document.getElementById('solid-dot').classList.replace('bg-emerald-500', 'bg-red-600');
+        }
+
+        function resetAmbulanceStatus() {
+            const statusLi = document.getElementById('ambulance-status');
+            const icon = document.getElementById('ambulance-icon');
+            const text = document.getElementById('ambulance-text');
+
+            statusLi.className = "flex items-center text-yellow-400 animate-pulse";
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+            text.innerText = "Waiting for Hospital to dispatch Ambulance...";
+        }
+
+        // ==========================================
+        // ACTION BUTTONS & PRIVACY LOCK
+        // ==========================================
+
+        function copyLocation() {
+            if (!currentGpsLocation) return;
+            
+            const clipboardText = `Patient Location: ${currentGpsLocation}\nAssigned Hospital: ${hospitalLocation}`;
+            
+            // Create a temporary hidden text area to copy from (safest method for iframes)
+            const textArea = document.createElement("textarea");
+            textArea.value = clipboardText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast("Locations copied to clipboard!");
+            } catch (err) {
+                console.error("Failed to copy text", err);
+            }
+            document.body.removeChild(textArea);
+            
+            // Immediately purge data from screen
+            triggerPrivacyLock("Locations copied to clipboard.");
+        }
+
+        function openMaps() {
+            if (!currentGpsLocation) return;
+            
+            // Format URL for Google Maps driving directions
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(currentGpsLocation)}&destination=${encodeURIComponent(hospitalLocation)}`;
+            window.open(mapsUrl, '_blank');
+            
+            // Immediately purge data from screen
+            triggerPrivacyLock("Directions opened in Google Maps.");
+        }
+
+        function triggerPrivacyLock(reasonPhrase) {
+            // Hide the active alert
+            document.getElementById('alert-state').classList.add('hidden');
+            
+            // Clear the map iframe source to ensure location data is completely purged
+            document.getElementById('location-map').src = "";
+            document.getElementById('map-container').classList.add('hidden');
+            
+            // Update the privacy message
+            document.getElementById('resolved-message').innerText = `${reasonPhrase} For patient privacy and security, live telemetry has been disconnected and purged from this device.`;
+            
+            // Show the locked state
+            document.getElementById('resolved-state').classList.remove('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-notification');
+            toast.innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 3000);
+        }
+    </script>
+</body>
+</html>
