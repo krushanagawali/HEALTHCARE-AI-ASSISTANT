@@ -423,10 +423,22 @@
         
         function setupSocketListeners() {
             // New Family Joins Live
-            socket.on('family_connected', (data) => {
-                const address = data.address || "Location active. Shared access granted via secure QR.";
-                addFamilyMemberToProfile(data.name, data.mobile, address);
-            });
+            // ... in day12_patient_dashboard.html ...
+socket.on('family_connected', (data) => {
+    // data is { name: ..., mobile: ..., address: ... }
+    const container = document.getElementById('family-info-container');
+    const noMsg = document.getElementById('no-family-msg');
+    if(noMsg) noMsg.remove();
+
+    const card = document.createElement('div');
+    card.className = "bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 space-y-2 text-sm";
+    card.innerHTML = `
+        <p class="text-white font-bold">${data.name}</p>
+        <p class="text-emerald-400">${data.mobile}</p>
+        <p class="text-slate-400">${data.address}</p>
+    `;
+    container.appendChild(card);
+});
 
             // Restored Family from DB
             socket.on('existing_family', (familyList) => {
