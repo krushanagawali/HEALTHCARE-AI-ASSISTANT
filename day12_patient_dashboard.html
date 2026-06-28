@@ -3,259 +3,667 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Health Monitor</title>
+    <title>My Health Monitor (Patient)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Socket.IO library for real-time connection -->
+    <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- QR Code Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
-        body { background-color: #0f172a; color: #f8fafc; } 
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; } 
         
         @keyframes pulse-soft-red {
             0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
             50% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
         }
-        .patient-alert-pulse {
-            animation: pulse-soft-red 2.5s infinite;
+        .patient-alert-pulse { animation: pulse-soft-red 2.5s infinite; }
+        
+        /* Hide scrollbar for clean chat UI */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes scan {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(500%); }
         }
     </style>
 </head>
-<body class="min-h-screen p-6 sm:p-10 font-sans flex flex-col items-center">
+<body class="min-h-screen flex flex-col items-center overflow-x-hidden">
 
-    <!-- Top Navigation Bar -->
-    <header class="w-full max-w-2xl flex justify-between items-center border-b border-slate-800 pb-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-white">❤️ My Health Monitor</h1>
-            <p class="text-slate-400 mt-1">ID: <span class="font-bold text-white">PT-208</span></p>
+    <!-- ========================================== -->
+    <!-- 1. LOGIN & ACTIVATION SCREEN               -->
+    <!-- ========================================== -->
+    <div id="login-view" class="w-full max-w-md mt-12 p-6 flex flex-col items-center transition-all duration-300">
+        <!-- Profile Icon Symbol -->
+        <div class="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6 border-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
         </div>
-        <div class="flex items-center space-x-3 bg-slate-900 px-4 py-2 rounded-full border border-slate-700">
-            <span class="relative flex h-3 w-3">
-              <span id="ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span id="solid-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
-            <span id="connection-status" class="text-emerald-400 font-semibold text-sm tracking-wider">SYSTEM ACTIVE</span>
-        </div>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="w-full max-w-2xl">
         
-        <!-- The "Idle" state -->
-        <div id="idle-state" class="bg-slate-900/80 rounded-3xl p-12 border border-slate-800 text-center shadow-xl">
-            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 mb-8">
-                <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-            </div>
-            <h2 class="text-3xl font-semibold text-white mb-2">Your heart looks great.</h2>
-            <p class="text-slate-400 text-lg">Your wearable is continuously analyzing your rhythm. You are safe and protected.</p>
+        <h1 class="text-2xl font-bold text-white mb-8">User Setup</h1>
 
-            <!-- LIVE EXACT GPS DISPLAY -->
-            <div class="mt-8 p-5 bg-slate-800/80 rounded-xl border border-slate-700 inline-block shadow-inner">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Your Device's Exact Live Location</p>
-                <div class="flex flex-col items-center justify-center space-y-1">
-                    <div class="flex items-center space-x-2">
-                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        <p id="live-gps-display" class="text-yellow-400 font-mono text-lg animate-pulse">Acquiring GPS Permission...</p>
-                    </div>
-                    <p id="gps-accuracy" class="text-xs text-slate-500 hidden">Accuracy rating loading...</p>
+        <div class="w-full space-y-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <!-- Full Name -->
+            <div>
+                <label class="block text-slate-400 text-sm font-bold mb-2">Full Name</label>
+                <input type="text" id="patient-name" placeholder="e.g. John Doe" class="w-full bg-slate-800 text-white rounded-xl p-4 border border-slate-700 focus:border-emerald-500 outline-none">
+            </div>
+            
+            <!-- Mobile Number with Dropdown -->
+            <div>
+                <label class="block text-slate-400 text-sm font-bold mb-2">Mobile No.</label>
+                <div class="flex">
+                    <select id="country-code" class="bg-slate-800 text-white rounded-l-xl p-4 border border-r-0 border-slate-700 focus:border-emerald-500 outline-none">
+                        <option value="+91">+91 (IN)</option>
+                        <option value="+1">+1 (US)</option>
+                        <option value="+44">+44 (UK)</option>
+                    </select>
+                    <input type="tel" id="patient-mobile" placeholder="1234567890" maxlength="10" class="w-full bg-slate-800 text-white rounded-r-xl p-4 border border-slate-700 focus:border-emerald-500 outline-none tracking-widest">
                 </div>
             </div>
 
-            <!-- DEV TRIGGER BUTTON -->
-            <div class="mt-8 border-t border-slate-800 pt-8">
-                <button onclick="triggerRealLocationSOS()" class="w-full sm:w-auto px-6 py-4 bg-red-950/60 hover:bg-red-900/80 border border-red-800 text-red-300 rounded-xl transition font-bold shadow-lg hover:shadow-red-900/20">
-                    [Dev Tool] Broadcast Exact Location SOS
+            <!-- Home Address -->
+            <div>
+                <label class="block text-slate-400 text-sm font-bold mb-2">Home Address</label>
+                <textarea id="patient-address" rows="2" placeholder="Enter your full home address" class="w-full bg-slate-800 text-white rounded-xl p-4 border border-slate-700 focus:border-emerald-500 outline-none"></textarea>
+            </div>
+
+            <button onclick="activatePatient()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition shadow-lg mt-4 text-lg">
+                Start Monitoring
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. MAIN DASHBOARD VIEW                     -->
+    <!-- ========================================== -->
+    <div id="main-view" class="hidden w-full max-w-md md:max-w-2xl min-h-screen flex flex-col bg-slate-950">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center p-6 bg-slate-900 border-b border-slate-800 sticky top-0 z-10">
+            <!-- Top Left: 3 Line Menu -->
+            <button class="text-slate-400 hover:text-white transition">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            
+            <!-- Top Middle: Title -->
+            <h1 class="text-xl font-bold text-white tracking-wide">Patient Dashboard</h1>
+            
+            <!-- Top Right: Notification & Profile -->
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleNotifications()" class="relative text-slate-400 hover:text-white transition">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    <span class="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-slate-900"></span>
                 </button>
-                <p class="text-slate-500 text-sm mt-3 px-4">Clicking this acts as the "Fake Watch" detecting a STEMI. It instantly blasts your real browser coordinates to the Server, Doctor, and Family.</p>
+                <!-- Profile Icon Button -->
+                <button onclick="openProfile()" class="w-9 h-9 bg-slate-800 rounded-full flex items-center justify-center border border-slate-600 hover:border-emerald-500 transition shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </button>
             </div>
-        </div>
+        </header>
 
-        <!-- The "Emergency Alert" Box (Hidden by default) -->
-        <div id="alert-state" class="hidden">
-            <!-- Large, highly readable alert box for the patient -->
-            <div class="bg-red-950 border-2 border-red-500 rounded-3xl p-8 sm:p-12 patient-alert-pulse shadow-2xl text-center">
+        <main class="p-6 flex-1 space-y-6">
+            
+            <!-- Healthcare AI Assistant Search -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
+                <h2 class="text-emerald-400 font-bold mb-3 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Healthcare AI Assistant
+                </h2>
+                <div class="relative cursor-text group" onclick="openAIChat()">
+                    <input type="text" readonly placeholder="Ask a question about your health..." class="w-full bg-slate-800 text-slate-300 rounded-full py-3 px-5 border border-slate-700 cursor-pointer group-hover:border-emerald-500 transition outline-none">
+                    <button class="absolute right-2 top-1.5 p-1.5 bg-emerald-600 rounded-full text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PPG Sensor Reading -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md flex justify-between items-center">
+                <div>
+                    <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider mb-1">PPG Sensor Reading</h3>
+                    <div class="flex items-baseline space-x-2">
+                        <span id="ppg-bpm" class="text-4xl font-mono font-bold text-white">72</span>
+                        <span class="text-slate-500 font-bold">BPM</span>
+                    </div>
+                </div>
+                <div class="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center animate-pulse">
+                    <svg class="w-8 h-8 text-rose-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </div>
+            </div>
+
+            <!-- ECG Sensor Reading -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
+                    <span id="ecg-status" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors">Normal Sinus</span>
+                </div>
+                <!-- Simulated ECG Wave -->
+                <div class="h-16 w-full overflow-hidden relative flex items-center border-b border-slate-800 pb-2">
+                    <svg class="w-full h-full text-emerald-500 transition-colors" preserveAspectRatio="none" viewBox="0 0 200 40" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path id="ecg-line" d="M0 20 L20 20 L25 10 L30 30 L35 20 L80 20 L85 15 L90 25 L95 20 L200 20" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent w-10 animate-[scan_2s_linear_infinite]"></div>
+                </div>
+                <div class="mt-3 flex justify-between items-center">
+                    <p class="text-xs text-slate-500">Live Stream Data</p>
+                    <p class="text-white font-mono text-sm"><span id="ecg-mv">0.85</span> mV</p>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="pt-4">
+                <h2 class="text-lg font-bold text-white mb-4">System Alerts</h2>
                 
-                <h2 class="text-4xl sm:text-5xl font-extrabold text-red-500 tracking-tight mb-4">HELP IS ON THE WAY</h2>
-                <p class="text-red-200 text-xl sm:text-2xl mb-10">We detected an anomaly. Your medical team and family have been notified.</p>
-                
-                <!-- Live Ambulance Status -->
-                <div class="bg-black/40 rounded-2xl p-6 border border-red-900/50 mb-10">
-                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Emergency Status</h3>
-                    <div id="ambulance-status" class="flex flex-col items-center justify-center text-yellow-400 animate-pulse">
-                        <svg id="ambulance-icon" class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span id="ambulance-text" class="text-2xl font-bold text-center">Coordinating with Hospital...</span>
+                <!-- Emergency Alert Box (Hidden) -->
+                <div id="alert-state" class="hidden">
+                    <div class="bg-red-950 border-2 border-red-500 rounded-3xl p-6 patient-alert-pulse shadow-2xl text-center">
+                        <h2 class="text-3xl font-extrabold text-red-500 tracking-tight mb-2">HELP IS ON THE WAY</h2>
+                        <p class="text-red-200 text-lg mb-6">We detected an anomaly. Medical team notified.</p>
+                        
+                        <div class="bg-black/40 rounded-xl p-4 border border-red-900/50 mb-6">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Status</h3>
+                            <div id="ambulance-status" class="flex flex-col items-center text-yellow-400 animate-pulse">
+                                <span id="ambulance-text" class="text-lg font-bold text-center">Coordinating with Hospital...</span>
+                            </div>
+                        </div>
+
+                        <div class="text-left bg-slate-900 rounded-xl p-4 border border-slate-700">
+                            <h3 class="text-sm font-bold text-white mb-2">🚨 Actions:</h3>
+                            <ul class="space-y-2 text-sm text-slate-300">
+                                <li><strong>1.</strong> Sit or lie down immediately.</li>
+                                <li><strong>2.</strong> Unlock your front door.</li>
+                                <li><strong>3.</strong> Stay calm and breathe.</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Critical Instructions Checklist -->
-                <div class="text-left bg-slate-900 rounded-2xl p-6 border border-slate-700">
-                    <h3 class="text-lg font-bold text-white mb-4 border-b border-slate-700 pb-2">🚨 What you need to do right now:</h3>
-                    <ul class="space-y-4 text-lg text-slate-300">
-                        <li class="flex items-start">
-                            <span class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-slate-800 text-white font-bold mr-4">1</span>
-                            <span><strong>Sit or lie down</strong> in a comfortable position immediately. Do not walk around.</span>
-                        </li>
-                        <li class="flex items-start">
-                            <span class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-slate-800 text-white font-bold mr-4">2</span>
-                            <span><strong>Unlock your front door</strong> so paramedics can enter quickly.</span>
-                        </li>
-                        <li class="flex items-start">
-                            <span class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-slate-800 text-white font-bold mr-4">3</span>
-                            <span><strong>Stay calm and breathe.</strong> Do NOT attempt to drive yourself to the hospital.</span>
-                        </li>
-                    </ul>
+                <!-- Safe State Placeholder -->
+                <div id="idle-state" class="bg-slate-900/50 rounded-2xl p-6 border border-slate-800 text-center">
+                    <p class="text-slate-500">No active alerts. You are safe.</p>
+                    
+                    <!-- DEV SOS BUTTON -->
+                    <button onclick="triggerRealLocationSOS()" class="mt-6 w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-sm rounded-lg px-4 py-2 transition shadow">
+                        [Dev Tool] Simulate STEMI Attack
+                    </button>
                 </div>
+            </div>
 
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. PROFILE VIEW                            -->
+    <!-- ========================================== -->
+    <div id="profile-view" class="hidden w-full max-w-md md:max-w-2xl min-h-screen bg-slate-950 flex flex-col">
+        <!-- Profile Header -->
+        <header class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800 sticky top-0">
+            <button onclick="closeProfile()" class="text-slate-400 hover:text-white flex items-center transition font-semibold">
+                <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center mr-2 border border-slate-600">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </div>
+                Back
+            </button>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Location Tracker Indicator (Defaults to OFF to save battery) -->
+                <div id="gps-status-indicator" class="flex items-center space-x-1 text-slate-400 text-xs font-bold bg-slate-800 px-2 py-1 rounded transition-colors duration-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span>Location: OFF (Saving Battery)</span>
+                </div>
+                
+                <!-- Small QR Code -->
+                <button onclick="openQRFullscreen()" class="bg-white p-1 rounded hover:shadow-[0_0_10px_rgba(255,255,255,0.5)] transition" title="Tap to Enlarge">
+                    <div id="qrcode-small" class="pointer-events-none w-8 h-8 flex items-center justify-center"></div>
+                </button>
+            </div>
+        </header>
+
+        <main class="p-6 flex-1 space-y-6">
+            <!-- Patient Information -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
+                <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">Patient Information</h2>
+                <div class="space-y-3 text-sm">
+                    <p class="flex justify-between"><span class="text-slate-500">Patient ID:</span> <span id="prof-pid" class="text-white font-mono font-bold bg-slate-800 px-2 py-0.5 rounded tracking-widest text-emerald-400"></span></p>
+                    <p class="flex justify-between"><span class="text-slate-500">Name:</span> <span id="prof-name" class="text-white font-medium"></span></p>
+                    <p class="flex justify-between"><span class="text-slate-500">Mobile No:</span> <span id="prof-mobile" class="text-white font-medium"></span></p>
+                    <div class="flex flex-col pt-1">
+                        <span class="text-slate-500 mb-1">Address:</span> 
+                        <span id="prof-address" class="text-white bg-slate-800/50 p-3 rounded-lg leading-relaxed border border-slate-800"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Family Information -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
+                <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">Family Information</h2>
+                
+                <div id="family-info-container" class="space-y-4">
+                    <p id="no-family-msg" class="text-slate-500 text-sm italic text-center py-4">No family member connected yet. Have them scan your QR code.</p>
+                    <!-- Family cards injected here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Buttons -->
+        <footer class="p-6 flex justify-between items-center border-t border-slate-800 bg-slate-900 mt-auto">
+            <button onclick="logout()" class="text-slate-400 hover:text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-slate-800 transition">
+                Log Out
+            </button>
+            <button onclick="deleteAccount()" class="text-red-500 hover:text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-red-900/30 transition">
+                Delete Account
+            </button>
+        </footer>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODALS                                     -->
+    <!-- ========================================== -->
+
+    <!-- QR Fullscreen Modal -->
+    <div id="qr-modal" class="hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6">
+        <button onclick="closeQRFullscreen()" class="absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800 p-2 rounded-full transition hover:bg-slate-700">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h2 class="text-2xl font-bold text-white mb-8">Scan to Connect</h2>
+        <div id="qrcode-large" class="bg-white p-4 rounded-3xl shadow-[0_0_40px_rgba(16,185,129,0.3)]"></div>
+        <p class="text-emerald-400 font-mono mt-8 text-xl tracking-widest font-bold" id="qr-id-display"></p>
+        <p class="text-slate-400 text-sm mt-4 text-center">Family members can scan this code to link to your live health data.</p>
+    </div>
+
+    <!-- AI Chat Modal (Live Gemini Integration) -->
+    <div id="ai-modal" class="hidden fixed inset-0 z-50 bg-slate-950 flex flex-col w-full max-w-md md:max-w-2xl mx-auto">
+        <header class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <h2 class="text-white font-bold">Health Assistant AI</h2>
+            </div>
+            <button onclick="closeAIChat()" class="text-slate-400 hover:text-white transition">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </header>
+        
+        <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+            <!-- AI Welcome Message -->
+            <div class="flex items-start mb-4">
+                <div class="w-8 h-8 bg-emerald-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-300 text-sm max-w-[85%] border border-slate-700">
+                    Hello! I am your AI Health Assistant powered by Gemini. I can read your live smartwatch metrics. How can I help you today?
+                </div>
             </div>
         </div>
-    </main>
+
+        <div class="p-4 bg-slate-900 border-t border-slate-800">
+            <form onsubmit="handleAIChat(event)" class="relative">
+                <input type="text" id="ai-input" autocomplete="off" placeholder="Message assistant..." class="w-full bg-slate-800 text-white rounded-full py-3 pl-5 pr-12 border border-slate-700 focus:border-emerald-500 outline-none">
+                <button type="submit" class="absolute right-2 top-1.5 p-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-full text-white transition shadow-md">
+                    <svg class="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+                </button>
+            </form>
+        </div>
+    </div>
 
     <script>
         // ==========================================
-        // REAL-TIME EXACT BROWSER GEOLOCATION
+        // STATE VARIABLES
         // ==========================================
-        let currentRealLocation = "Acquiring GPS...";
+        let socket;
+        let currentPatientId = "";
+        let currentRealLocation = ""; 
+        let gpsActive = false;
+        
+        let pName = "";
+        let pMobile = "";
+        let pAddress = "";
+        let familyCounter = 1;
 
-        if ("geolocation" in navigator) {
-            // Using watchPosition so if the patient is moving, the location updates dynamically
-            navigator.geolocation.watchPosition(
-                (position) => {
-                    // Grab EXACT full-precision coordinates
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    const accuracy = position.coords.accuracy; // Accuracy in meters
-                    
-                    // Format specifically as "lat, lng" so Google Maps pins it flawlessly for the Family and Doctor
-                    currentRealLocation = `${lat}, ${lng}`;
-                    
-                    const gpsDisplay = document.getElementById('live-gps-display');
-                    const accDisplay = document.getElementById('gps-accuracy');
-                    
-                    // Display slightly rounded numbers visually so it doesn't overflow, but send exact data to server
-                    gpsDisplay.innerText = `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`;
-                    gpsDisplay.classList.remove('animate-pulse', 'text-yellow-400');
-                    gpsDisplay.classList.add('text-emerald-400');
-                    
-                    accDisplay.innerText = `GPS Accuracy: Within ${Math.round(accuracy)} meters`;
-                    accDisplay.classList.remove('hidden');
-                },
-                (error) => {
-                    console.error("Geolocation error:", error.message || error);
-                    // FALLBACK: When running in iframes or environments where location is blocked,
-                    // we provide a simulated fallback so the dashboard can still be tested!
-                    currentRealLocation = "20.7002, 77.0082";
-                    
-                    const gpsDisplay = document.getElementById('live-gps-display');
-                    gpsDisplay.innerText = "20.7002°, 77.0082° (Simulated)";
-                    gpsDisplay.classList.remove('animate-pulse', 'text-yellow-400');
-                    gpsDisplay.classList.add('text-blue-400');
-                    
-                    const accDisplay = document.getElementById('gps-accuracy');
-                    accDisplay.innerText = `GPS Accuracy: Simulated for testing`;
-                    accDisplay.classList.remove('hidden');
-                },
-                // Force high accuracy to use GPS hardware instead of basic IP matching
-                { enableHighAccuracy: true, maximumAge: 0 }
-            );
-        } else {
-            document.getElementById('live-gps-display').innerText = "Geolocation not supported by browser";
-        }
+        // The Gemini API key will be automatically injected by the environment
+        const apiKey = ""; 
 
         // ==========================================
-        // SOCKET.IO CONNECTION
+        // INITIALIZATION & UI TOGGLES
         // ==========================================
-        if (typeof io !== 'undefined') {
-            // Connect to the exact same Python Middleman Server
-            const socket = io('https://stemi-healtcare-ai.onrender.com');
+        
+        function activatePatient() {
+            pName = document.getElementById('patient-name').value.trim();
+            const rawMobile = document.getElementById('patient-mobile').value.trim();
+            const cCode = document.getElementById('country-code').value;
+            pAddress = document.getElementById('patient-address').value.trim();
 
-            socket.on('connect', () => {
-                console.log("Connected to Server!");
-            });
-
-            // Listen for the EXACT same alert
-            socket.on('stemi_alert', (data) => {
-                console.log("EMERGENCY DETECTED:", data);
-                
-                // Hide idle, show alert
-                document.getElementById('idle-state').classList.add('hidden');
-                document.getElementById('alert-state').classList.remove('hidden');
-
-                resetAmbulanceStatus();
-
-                // Play a loud alert sound to wake or alert the patient
-                let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
-                audio.play().catch(e => console.log("Audio play blocked by browser:", e));
-            });
-
-            // Listen for the hospital to dispatch the ambulance
-            socket.on('ambulance_dispatched', () => {
-                console.log("HOSPITAL DISPATCHED AMBULANCE!");
-                
-                const statusDiv = document.getElementById('ambulance-status');
-                const icon = document.getElementById('ambulance-icon');
-                const text = document.getElementById('ambulance-text');
-
-                // Change visual from yellow pulse to solid green
-                statusDiv.classList.replace('text-yellow-400', 'text-emerald-400');
-                statusDiv.classList.remove('animate-pulse');
-                
-                // Change clock icon to a siren/truck icon
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 17.5A2.5 2.5 0 0116.5 20h-9A2.5 2.5 0 015 17.5m14 0V9a2 2 0 00-2-2h-3.5L12 4.5M5 17.5V11a2 2 0 012-2h1.5l1.5-2.5m-5 11a2.5 2.5 0 01-2.5-2.5V11"></path>';
-                
-                // Update text to be reassuring
-                text.innerText = "AMBULANCE EN ROUTE!";
-            });
-
-        } else {
-            document.getElementById('connection-status').innerText = "OFFLINE";
-            document.getElementById('connection-status').classList.replace('text-emerald-400', 'text-red-500');
-            document.getElementById('ping-dot').classList.add('hidden');
-            document.getElementById('solid-dot').classList.replace('bg-emerald-500', 'bg-red-600');
-        }
-
-        // ==========================================
-        // BROWSER-BASED DISTRESS TRIGGER
-        // ==========================================
-        function triggerRealLocationSOS() {
-            if (currentRealLocation.includes("Acquiring") || currentRealLocation.includes("Denied")) {
-                alert("Please allow Location Access in your browser before simulating the SOS!");
+            if(!pName || !rawMobile || rawMobile.length < 10 || !pAddress) {
+                alert("Please fill in all details (Name, 10-digit Mobile, Home Address) to create your profile.");
                 return;
             }
+            
+            pMobile = cCode + " " + rawMobile;
+            
+            // Generate Unique ID 
+            currentPatientId = "PT-" + Math.floor(1000 + Math.random() * 9000);
 
-            // Act as the Watch: Send the real location payload directly to our Python server
-            const payload = {
-                "patient_id": "PT-208",
-                "gps_location": currentRealLocation, // This is now full precision data
-                "danger_score": 0.95,
-                "token": "my-secret-watch-token"
-            };
+            // Connect to server (using local server for testing; change to your Render URL if deployed)
+            if (typeof io !== 'undefined') {
+                socket = io('http://127.0.0.1:5000'); // Switch to https://your-app.onrender.com if live
+                
+                socket.on('connect', () => {
+                    socket.emit('join_system', {
+                        room: 'room_' + currentPatientId,
+                        role: 'patient',
+                        patient_id: currentPatientId,
+                        name: pName,
+                        mobile: pMobile
+                    });
+                });
 
-            fetch('https://stemi-healtcare-ai.onrender.com/emergency_dispatch', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(response => {
-                console.log("Exact location SOS successfully fired to the server!");
-            })
-            .catch(error => {
-                console.error("Error sending SOS:", error);
-                alert("Failed to reach server. Make sure day7_middleman_server.py is running!");
+                setupSocketListeners();
+            }
+
+            // Populate Profile Data
+            document.getElementById('prof-pid').innerText = currentPatientId;
+            document.getElementById('prof-name').innerText = pName;
+            document.getElementById('prof-mobile').innerText = pMobile;
+            document.getElementById('prof-address').innerText = pAddress;
+            document.getElementById('qr-id-display').innerText = currentPatientId;
+
+            // Generate QR Codes
+            document.getElementById("qrcode-small").innerHTML = ""; 
+            new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
+            
+            document.getElementById("qrcode-large").innerHTML = ""; 
+            new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+
+            // Switch Views
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+            
+            startSensorSimulation();
+        }
+
+        function openProfile() {
+            document.getElementById('main-view').classList.add('hidden');
+            document.getElementById('profile-view').classList.remove('hidden');
+        }
+
+        function closeProfile() {
+            document.getElementById('profile-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+        }
+
+        function openQRFullscreen() {
+            document.getElementById('qr-modal').classList.remove('hidden');
+        }
+
+        function closeQRFullscreen() {
+            document.getElementById('qr-modal').classList.add('hidden');
+        }
+
+        function toggleNotifications() {
+            alert("No new notifications.");
+        }
+
+        function logout() {
+            if(confirm("Are you sure you want to log out?")) window.location.reload();
+        }
+
+        function deleteAccount() {
+            if(confirm("WARNING: This will permanently delete your profile and disconnect your wearable. Proceed?")) {
+                alert("Account deleted.");
+                window.location.reload();
+            }
+        }
+
+        // ==========================================
+        // SOCKET.IO LISTENERS
+        // ==========================================
+        
+        function setupSocketListeners() {
+            // New Family Joins Live
+            socket.on('family_connected', (data) => {
+                const address = data.address || "Location active. Shared access granted via secure QR.";
+                addFamilyMemberToProfile(data.name, data.mobile, address);
+            });
+
+            // Restored Family from DB
+            socket.on('existing_family', (familyList) => {
+                const container = document.getElementById('family-info-container');
+                if (familyList.length > 0) {
+                    container.innerHTML = ''; 
+                    familyList.forEach(member => {
+                        const address = member[2] || "Location active. Shared access granted via secure QR.";
+                        addFamilyMemberToProfile(member[0], member[1], address); 
+                    });
+                }
+            });
+
+            // Emergency Triggered
+            socket.on('stemi_alert', (data) => {
+                triggerLocalAlert();
+            });
+
+            // Hospital Dispatch
+            socket.on('ambulance_dispatched', () => {
+                const statusDiv = document.getElementById('ambulance-status');
+                
+                statusDiv.classList.replace('text-yellow-400', 'text-emerald-400');
+                statusDiv.classList.remove('animate-pulse');
+                statusDiv.innerHTML = `
+                    <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 17.5A2.5 2.5 0 0116.5 20h-9A2.5 2.5 0 015 17.5m14 0V9a2 2 0 00-2-2h-3.5L12 4.5M5 17.5V11a2 2 0 012-2h1.5l1.5-2.5m-5 11a2.5 2.5 0 01-2.5-2.5V11"></path></svg>
+                    <span class="text-2xl font-bold text-center">AMBULANCE EN ROUTE!</span>
+                `;
             });
         }
 
-        // Helper function to reset the UI if another alert comes in
-        function resetAmbulanceStatus() {
-            const statusDiv = document.getElementById('ambulance-status');
-            const icon = document.getElementById('ambulance-icon');
-            const text = document.getElementById('ambulance-text');
+        // Adds family layout to the Profile screen
+        function addFamilyMemberToProfile(fName, fMobile, fAddress) {
+            const container = document.getElementById('family-info-container');
+            const noMsg = document.getElementById('no-family-msg');
+            if(noMsg) noMsg.remove();
 
-            statusDiv.className = "flex flex-col items-center justify-center text-yellow-400 animate-pulse";
-            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-            text.innerText = "Coordinating with Hospital...";
+            // Generate unique Family ID
+            const fId = "FM-" + (8000 + familyCounter++);
+
+            const card = document.createElement('div');
+            card.className = "bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 space-y-2 text-sm shadow-sm";
+            card.innerHTML = `
+                <p class="flex justify-between"><span class="text-slate-500">Family ID:</span> <span class="text-white font-mono font-bold">${fId}</span></p>
+                <p class="flex justify-between"><span class="text-slate-500">Name:</span> <span class="text-white font-medium">${fName}</span></p>
+                <p class="flex justify-between"><span class="text-slate-500">Mobile No:</span> <span class="text-emerald-400 font-medium">${fMobile}</span></p>
+                <div class="flex flex-col pt-1">
+                    <span class="text-slate-500 mb-1">Address:</span> 
+                    <span class="text-slate-300 bg-slate-900 p-3 rounded-lg text-xs leading-relaxed border border-slate-800">${fAddress}</span>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        // ==========================================
+        // SENSOR SIMULATION (UI Polish)
+        // ==========================================
+        
+        function startSensorSimulation() {
+            setInterval(() => {
+                // Fluctuate Heart Rate 70-75
+                const bpm = Math.floor(Math.random() * (75 - 70 + 1) + 70);
+                document.getElementById('ppg-bpm').innerText = bpm;
+                
+                // Fluctuate ECG Voltage
+                const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
+                document.getElementById('ecg-mv').innerText = mv;
+            }, 2000);
+        }
+
+        // ==========================================
+        // AI ASSISTANT CHAT (Gemini Integration)
+        // ==========================================
+        
+        function openAIChat() {
+            document.getElementById('ai-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('ai-input').focus(), 100);
+        }
+        function closeAIChat() {
+            document.getElementById('ai-modal').classList.add('hidden');
+        }
+
+        async function fetchGeminiResponse(prompt, retries = 5) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            let delay = 1000;
+            
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    return await res.json();
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        async function handleAIChat(e) {
+            e.preventDefault();
+            const inputField = document.getElementById('ai-input');
+            const msg = inputField.value.trim();
+            if(!msg) return;
+
+            const chatBox = document.getElementById('chat-box');
+
+            // Inject User Message
+            chatBox.innerHTML += `
+                <div class="flex items-start justify-end mb-4">
+                    <div class="bg-emerald-600 rounded-2xl rounded-tr-none p-3 text-white text-sm max-w-[85%] shadow-md">
+                        ${msg}
+                    </div>
+                </div>
+            `;
+            inputField.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Inject Loading Indicator
+            const loadingId = 'loading-' + Date.now();
+            chatBox.innerHTML += `
+                <div id="${loadingId}" class="flex items-start mb-4">
+                    <div class="w-8 h-8 bg-emerald-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                        <span class="text-white text-xs animate-pulse">...</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-400 text-sm italic border border-slate-700">
+                        Analyzing metrics...
+                    </div>
+                </div>
+            `;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Context-Aware Prompt for Gemini
+            const currentBPM = document.getElementById('ppg-bpm').innerText;
+            const currentECG = document.getElementById('ecg-status').innerText;
+            
+            const prompt = `You are a helpful, reassuring AI Health Assistant built into a patient's smart wearable app. 
+            The patient's current live heart rate is ${currentBPM} BPM. 
+            Their current live ECG reading status is: "${currentECG}". 
+            Keep your answer very brief (2-3 short sentences), highly supportive, and easy to understand. Do not use markdown symbols like asterisks. 
+            The patient asks: "${msg}"`;
+
+            try {
+                const result = await fetchGeminiResponse(prompt);
+                const replyText = result.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I'm having trouble analyzing your request right now.";
+                
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `
+                    <div class="flex items-start mb-4">
+                        <div class="w-8 h-8 bg-emerald-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                        <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-300 text-sm max-w-[85%] border border-slate-700">
+                            ${replyText}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error("Gemini API Error:", err);
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `
+                    <div class="flex items-start mb-4">
+                        <div class="w-8 h-8 bg-red-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1">!</div>
+                        <div class="bg-red-900/30 rounded-2xl rounded-tl-none p-4 text-red-400 text-sm border border-red-800">
+                            Connection error. Unable to reach the AI assistant.
+                        </div>
+                    </div>
+                `;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // ==========================================
+        // GPS & SOS LOGIC (Battery Saving Architecture)
+        // ==========================================
+        
+        function startGPS() {
+            if (gpsActive) return; // Prevent multiple watchers
+            gpsActive = true;
+            
+            // Update Profile UI to show Location is now tracking
+            const gpsInd = document.getElementById('gps-status-indicator');
+            if(gpsInd) {
+                gpsInd.className = "flex items-center space-x-1 text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded animate-pulse";
+                gpsInd.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path><span>Location: ACTIVE</span>`;
+            }
+            
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        currentRealLocation = `${position.coords.latitude}, ${position.coords.longitude}`;
+                    },
+                    (error) => { console.error(error); },
+                    { enableHighAccuracy: true }
+                );
+            }
+        }
+
+        function triggerLocalAlert() {
+            document.getElementById('idle-state').classList.add('hidden');
+            document.getElementById('alert-state').classList.remove('hidden');
+            let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
+            audio.play().catch(e => console.log(e));
+            
+            // Override simulated ECG on STEMI
+            document.getElementById('ecg-status').innerText = "ST-Elevation (CRITICAL)";
+            document.getElementById('ecg-status').classList.replace('bg-emerald-500/20', 'bg-red-500/20');
+            document.getElementById('ecg-status').classList.replace('text-emerald-400', 'text-red-400');
+            document.getElementById('ecg-line').classList.replace('text-emerald-500', 'text-red-500');
+            
+            // Critical Battery Saving Logic: Only activate GPS mapping when a STEMI actually occurs
+            startGPS();
+        }
+
+        function triggerRealLocationSOS() {
+            if (!currentPatientId) { alert("Please activate your profile first!"); return; }
+
+            // Turn on GPS for emergency & alert UI immediately
+            triggerLocalAlert();
+
+            const payload = {
+                "patient_id": currentPatientId, 
+                "gps_location": currentRealLocation, 
+                "danger_score": 0.95,
+                "token": "my-secret-watch-token" 
+            };
+
+            fetch('http://127.0.0.1:5000/emergency_dispatch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => console.log("SOS Fired!")).catch(e => alert("Server offline."));
         }
     </script>
 </body>
