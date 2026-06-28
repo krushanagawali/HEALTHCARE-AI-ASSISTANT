@@ -544,8 +544,22 @@
         
         function setupSocketListeners() {
             // Success: Server verified patient exists
-            socket.on('link_success', (data) => {
-                connectedPatientId = data.patient_id || "PT-LINKED";
+            // ... in day11_family_dashboard.html ...
+socket.on('link_success', (data) => {
+    // 1. Update Header
+    document.getElementById('header-patient-name').innerText = `Linked to: ${data.patient_name} (${data.patient_id})`;
+    
+    // 2. Populate Profile View Fields
+    document.getElementById('no-patient-msg').classList.add('hidden');
+    document.getElementById('patient-info-container').classList.remove('hidden');
+    
+    document.getElementById('prof-pid').innerText = data.patient_id;
+    document.getElementById('prof-pname').innerText = data.patient_name;
+    document.getElementById('prof-pmobile').innerText = data.patient_mobile;
+    document.getElementById('prof-paddress').innerText = data.patient_address;
+    
+    showToast("Successfully linked to patient!");
+});
                 
                 // Update Main Dashboard Header
                 document.getElementById('header-patient-name').innerText = `Linked to: ${data.patient_name} (${connectedPatientId})`;
