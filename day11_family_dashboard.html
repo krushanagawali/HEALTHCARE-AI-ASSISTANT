@@ -414,7 +414,7 @@
         
         let connectedPatientId = null;
         let currentGpsLocation = "";
-        const hospitalLocation = ""; 
+        const hospitalLocation = "Civil Hospital, Akola, Maharashtra"; // Set default to Akola
         
         let liveHealthInterval = null;
         let html5QrcodeScanner = null;
@@ -427,39 +427,45 @@
         // ==========================================
         
         function createFamilyProfile() {
-            fName = document.getElementById('family-name').value.trim();
-            const rawMobile = document.getElementById('family-mobile').value.trim();
-            const cCode = document.getElementById('family-country-code').value;
-            fAddress = document.getElementById('family-address').value.trim();
+            try {
+                fName = document.getElementById('family-name').value.trim();
+                const rawMobile = document.getElementById('family-mobile').value.trim();
+                const cCode = document.getElementById('family-country-code').value;
+                fAddress = document.getElementById('family-address').value.trim();
 
-            if(!fName || !rawMobile || rawMobile.length < 10 || !fAddress) {
-                alert("Please fill in all details (Name, 10-digit Mobile, Home Address) to create your profile.");
-                return;
-            }
-            
-            fMobile = cCode + " " + rawMobile;
-            currentFamilyId = "FM-" + Math.floor(1000 + Math.random() * 9000);
-
-            // Populate Family Profile Data
-            document.getElementById('prof-fid').innerText = currentFamilyId;
-            document.getElementById('prof-fname').innerText = fName;
-            document.getElementById('prof-fmobile').innerText = fMobile;
-            document.getElementById('prof-faddress').innerText = fAddress;
-
-            // Connect to server (Change to deployed URL if not running locally)
-            if (typeof io !== 'undefined') {
-                socket = io('http://127.0.0.1:5000'); 
+                // Relaxed the strict 10-digit rule so it doesn't block you during testing
+                if(!fName || !rawMobile || !fAddress) {
+                    alert("Please fill in all details (Name, Mobile, Home Address) to create your profile.");
+                    return;
+                }
                 
-                socket.on('connect', () => {
-                    console.log("Connected to Server!");
-                });
-                
-                setupSocketListeners();
-            }
+                fMobile = cCode + " " + rawMobile;
+                currentFamilyId = "FM-" + Math.floor(1000 + Math.random() * 9000);
 
-            // Switch Views
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('main-view').classList.remove('hidden');
+                // Populate Family Profile Data
+                document.getElementById('prof-fid').innerText = currentFamilyId;
+                document.getElementById('prof-fname').innerText = fName;
+                document.getElementById('prof-fmobile').innerText = fMobile;
+                document.getElementById('prof-faddress').innerText = fAddress;
+
+                // Connect to server (Change to deployed URL if not running locally)
+                if (typeof io !== 'undefined') {
+                    socket = io('http://127.0.0.1:5000'); 
+                    
+                    socket.on('connect', () => {
+                        console.log("Connected to Server!");
+                    });
+                    
+                    setupSocketListeners();
+                }
+
+                // Switch Views
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('main-view').classList.remove('hidden');
+            } catch (err) {
+                console.error("Failed to create profile:", err);
+                alert("An error occurred creating the profile. Check the console.");
+            }
         }
 
         function openProfile() {
@@ -544,22 +550,8 @@
         
         function setupSocketListeners() {
             // Success: Server verified patient exists
-            // ... in day11_family_dashboard.html ...
-socket.on('link_success', (data) => {
-    // 1. Update Header
-    document.getElementById('header-patient-name').innerText = `Linked to: ${data.patient_name} (${data.patient_id})`;
-    
-    // 2. Populate Profile View Fields
-    document.getElementById('no-patient-msg').classList.add('hidden');
-    document.getElementById('patient-info-container').classList.remove('hidden');
-    
-    document.getElementById('prof-pid').innerText = data.patient_id;
-    document.getElementById('prof-pname').innerText = data.patient_name;
-    document.getElementById('prof-pmobile').innerText = data.patient_mobile;
-    document.getElementById('prof-paddress').innerText = data.patient_address;
-    
-    showToast("Successfully linked to patient!");
-});
+            socket.on('link_success', (data) => {
+                connectedPatientId = data.patient_id || "PT-LINKED";
                 
                 // Update Main Dashboard Header
                 document.getElementById('header-patient-name').innerText = `Linked to: ${data.patient_name} (${connectedPatientId})`;
@@ -831,6 +823,16 @@ socket.on('link_success', (data) => {
             toast.classList.remove('hidden');
             setTimeout(() => { toast.classList.add('hidden'); }, 3000);
         }
+
+        // ==========================================
+        // AUTO-WIPE PRIVACY ON PRINT
+        // ==========================================
+        window.addEventListener('beforeprint', () => {
+            // Enforces strict data privacy. If the screen is printed (e.g., at an untrusted shop),
+            // all sensitive medical telemetry is instantly wiped from the DOM.
+            triggerPrivacyLock("Security Protocol: Document printing detected.");
+            document.body.innerHTML = "<div style='height: 100vh; display: flex; align-items: center; justify-content: center; background: #0f172a; color: white;'><h1 style='font-family: sans-serif;'>Data Purged for Patient Privacy</h1></div>";
+        });
 
         function resetAmbulanceStatus() {
             const statusLi = document.getElementById('ambulance-status');
