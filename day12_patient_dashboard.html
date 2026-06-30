@@ -347,7 +347,7 @@
 
             if (typeof io !== 'undefined') {
                 // Connecting to secure live Render URL with polling fallback transports
-                socket = io('https://healthcare-ai-assistant-1-5klv.onrender.com', {
+                socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', {
                     transports: ['polling', 'websocket']
                 }); 
                 
@@ -577,7 +577,7 @@
             };
 
             // FIXED: Pointing directly to the secure Render backend instead of local 127.0.0.1
-            fetch('https://healthcare-ai-assistant-1-5klv.onrender.com/emergency_dispatch', {
+            fetch('https://healthcare-ai-assistant-d3p8.onrender.com/emergency_dispatch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
