@@ -259,7 +259,7 @@
 
             // Connect to server (using local server for testing; change to your Render URL if deployed)
             if (typeof io !== 'undefined') {
-                socket = io('https://healthcare-ai-assistant-1-5klv.onrender.com'); 
+                socket = io('http://127.0.0.1:5000'); 
                 
                 socket.on('connect', () => {
                     console.log("Connected to Middleman Server successfully!");
