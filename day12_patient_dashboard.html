@@ -349,6 +349,7 @@
             // Connect to server (using local server for testing; change to your Render URL if deployed)
             if (typeof io !== 'undefined') {
                 socket = io('https://healthcare-ai-assistant-1-5klv.onrender.com'); // Switch to https://your-app.onrender.com if live
+                transports: ['polling', 'websocket'] // Forces a fallback method if direct WebSockets are blocked                
                 
                 socket.on('connect', () => {
                     socket.emit('join_system', {
