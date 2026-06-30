@@ -346,7 +346,7 @@
             currentPatientId = "PT-" + Math.floor(1000 + Math.random() * 9000);
 
             if (typeof io !== 'undefined') {
-                // FIXED: Directing to secure live Render URL with polling fallback transports
+                // Connecting to secure live Render URL with polling fallback transports
                 socket = io('https://healthcare-ai-assistant-1-5klv.onrender.com', {
                     transports: ['polling', 'websocket']
                 }); 
@@ -576,7 +576,7 @@
                 "token": "my-secret-watch-token" 
             };
 
-            // FIXED: Pointing directly to the secure Render backend
+            // FIXED: Pointing directly to the secure Render backend instead of local 127.0.0.1
             fetch('https://healthcare-ai-assistant-1-5klv.onrender.com/emergency_dispatch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
