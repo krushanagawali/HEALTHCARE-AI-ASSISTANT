@@ -348,7 +348,7 @@
             if (typeof io !== 'undefined') {
                 // Connecting to secure live Render URL with polling fallback transports
                 socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', {
-                    transports: ['polling', 'websocket']
+                    //transports: ['polling', 'websocket']
                 }); 
                 
                 socket.on('connect', () => {
