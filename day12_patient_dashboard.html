@@ -348,7 +348,7 @@
 
             // Connect to server (using local server for testing; change to your Render URL if deployed)
             if (typeof io !== 'undefined') {
-                socket = io('http://127.0.0.1:5000'); // Switch to https://your-app.onrender.com if live
+                socket = io('https://healthcare-ai-assistant-1-5klv.onrender.com'); // Switch to https://your-app.onrender.com if live
                 
                 socket.on('connect', () => {
                     socket.emit('join_system', {
@@ -671,7 +671,7 @@ socket.on('family_connected', (data) => {
                 "token": "my-secret-watch-token" 
             };
 
-            fetch('http://127.0.0.1:5000/emergency_dispatch', {
+            fetch('https://healthcare-ai-assistant-1-5klv.onrender.com/emergency_dispatch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
