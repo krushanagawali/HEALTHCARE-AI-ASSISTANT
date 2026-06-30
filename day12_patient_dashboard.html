@@ -41,7 +41,7 @@
             <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
         </div>
         
-        <h1 class="text-2xl font-bold text-white mb-8">Patient Setup</h1>
+        <h1 class="text-2xl font-bold text-white mb-8">User Setup</h1>
 
         <div class="w-full space-y-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
             <!-- Full Name -->
@@ -315,7 +315,7 @@
         // ==========================================
         let socket;
         let currentPatientId = "";
-        let currentRealLocation = ""; 
+        let currentRealLocation = "20.7002, 77.0082"; 
         let gpsActive = false;
         
         let pName = "";
@@ -348,7 +348,7 @@
 
             // Connect to server (using local server for testing; change to your Render URL if deployed)
             if (typeof io !== 'undefined') {
-                socket = io('https://healthcare-ai-assistant-1-5klv.onrender.com'); // Switch to https://your-app.onrender.com if live
+                socket = io('http://127.0.0.1:5000'); // Switch to https://your-app.onrender.com if live
                 
                 socket.on('connect', () => {
                     socket.emit('join_system', {
@@ -423,22 +423,10 @@
         
         function setupSocketListeners() {
             // New Family Joins Live
-            // ... in day12_patient_dashboard.html ...
-socket.on('family_connected', (data) => {
-    // data is { name: ..., mobile: ..., address: ... }
-    const container = document.getElementById('family-info-container');
-    const noMsg = document.getElementById('no-family-msg');
-    if(noMsg) noMsg.remove();
-
-    const card = document.createElement('div');
-    card.className = "bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 space-y-2 text-sm";
-    card.innerHTML = `
-        <p class="text-white font-bold">${data.name}</p>
-        <p class="text-emerald-400">${data.mobile}</p>
-        <p class="text-slate-400">${data.address}</p>
-    `;
-    container.appendChild(card);
-});
+            socket.on('family_connected', (data) => {
+                const address = data.address || "Location active. Shared access granted via secure QR.";
+                addFamilyMemberToProfile(data.name, data.mobile, address);
+            });
 
             // Restored Family from DB
             socket.on('existing_family', (familyList) => {
@@ -671,7 +659,7 @@ socket.on('family_connected', (data) => {
                 "token": "my-secret-watch-token" 
             };
 
-            fetch('https://healthcare-ai-assistant-1-5klv.onrender.com/emergency_dispatch', {
+            fetch('http://127.0.0.1:5000/emergency_dispatch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
