@@ -265,6 +265,17 @@ function clearSession() {
     localStorage.removeItem('userProfile');
     window.location.reload();
 }
+
+
+
+window.onload = function() {
+        const savedData = localStorage.getItem('docProfile');
+        if (savedData) {
+            const d = JSON.parse(savedData);
+            // Re-run activateDoctor logic with saved d.name, d.hosp etc
+            restoreDoctorSession(d);
+        }
+    };
         
         
         function activateDoctor() {
@@ -293,6 +304,9 @@ function clearSession() {
             document.getElementById('prof-doc-mobile').innerText = fullMobile;
             document.getElementById('prof-doc-landline').innerText = dLandline;
             document.getElementById('prof-hosp-address').innerText = hAddress;
+
+            const docData = { name: dName, hosp: hName, mobile: fullMobile, id: currentDoctorId };
+        localStorage.setItem('docProfile', JSON.stringify(docData));
 
             // Connect to server (using local server for testing; change to your Render URL if deployed)
             if (typeof io !== 'undefined') {
@@ -468,7 +482,8 @@ function clearSession() {
         function deleteAccount() {
             if(confirm("WARNING: This will permanently delete your doctor profile and revoke your hub access. Proceed?")) {
                 alert("Account deleted.");
-                window.location.reload();
+            localStorage.removeItem('docProfile');
+            window.location.reload();
             }
         }
     </script>
