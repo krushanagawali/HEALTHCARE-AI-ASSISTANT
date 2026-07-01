@@ -364,7 +364,33 @@ function clearSession() {
     window.location.reload();
 }
 
+// 1. AUTO-RESTORE ON REFRESH
+    window.onload = function() {
+        const savedData = localStorage.getItem('patientProfile');
+        if (savedData) {
+            const profile = JSON.parse(savedData);
+            restorePatientSession(profile);
+        }
+    };
 
+    function restorePatientSession(p) {
+        currentPatientId = p.id;
+        document.getElementById('prof-pid').innerText = p.id;
+        document.getElementById('prof-name').innerText = p.name;
+        document.getElementById('prof-mobile').innerText = p.mobile;
+        document.getElementById('prof-address').innerText = p.address;
+        
+        // Setup Socket
+        socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
+        socket.on('connect', () => {
+            socket.emit('join_system', { room: 'room_' + p.id, role: 'patient', patient_id: p.id });
+        });
+        setupSocketListeners();
+        
+        document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('main-view').classList.remove('hidden');
+        startSensorSimulation();
+    }
         
         // ==========================================
         // INITIALIZATION & UI TOGGLES
@@ -385,6 +411,8 @@ function clearSession() {
             
             // Generate Unique ID 
             currentPatientId = "PT-" + Math.floor(1000 + Math.random() * 9000);
+            const profile = { id: currentPatientId, name: pName, mobile: pMobile, address: pAddress };
+            localStorage.setItem('patientProfile', JSON.stringify(profile));
 
             if (typeof io !== 'undefined') {
                 // Connecting to secure live Render URL with polling fallback transports
@@ -441,8 +469,12 @@ function clearSession() {
         function closeQRFullscreen() { document.getElementById('qr-modal').classList.add('hidden'); }
         function toggleNotifications() { alert("No new notifications."); }
         function logout() { if(confirm("Are you sure?")) window.location.reload(); }
-        function deleteAccount() { if(confirm("Proceed?")) window.location.reload(); }
-
+        function deleteAccount() {
+        if(confirm("Proceed?")) {
+            localStorage.removeItem('patientProfile');
+            window.location.reload();
+        }
+    }
         // ==========================================
         // SOCKET.IO LISTENERS
         // ==========================================
