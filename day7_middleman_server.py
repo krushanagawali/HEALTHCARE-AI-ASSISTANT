@@ -132,6 +132,14 @@ def receive_emergency():
 def handle_dispatch():
     print("\n🚑 AMBULANCE DISPATCHED BY DOCTOR! Notifying network...")
     socketio.emit('ambulance_dispatched')
+#4.verify storage
+@app.route('/verify_session', methods=['POST'])
+def verify():
+    data = request.json
+    # Logic to check if this user exists in your sqlite hospital.db
+    # Return the user's saved info so the dashboard can re-populate its UI
+    return jsonify({"status": "active", "profile": ...})
+
 
 if __name__ == '__main__':
     print("🚀 Middleman Server is running on port 5000...")
