@@ -325,6 +325,44 @@
 
         const apiKey = ""; 
 
+
+//verify local storage
+
+        // --- PERSISTENCE ENGINE ---
+// Call this function immediately when the script loads
+(function checkSession() {
+    const savedProfile = localStorage.getItem('userProfile');
+    
+    // If we have data, auto-fill and initialize the socket
+    if (savedProfile) {
+        const profile = JSON.parse(savedProfile);
+        console.log("Resuming session for:", profile.name);
+        
+        // Hide the Login/Setup modal/overlay immediately
+        const loginOverlay = document.getElementById('login-overlay'); // Adjust ID as needed
+        if (loginOverlay) loginOverlay.style.display = 'none';
+        
+        // Initialize your dashboard connection using the restored data
+        initDashboard(profile); 
+    }
+})();
+
+// --- SAVE PROFILE ON FIRST LOGIN ---
+function saveLogin(data) {
+    // Save the entire profile object as a single string
+    localStorage.setItem('userProfile', JSON.stringify(data));
+    initDashboard(data);
+}
+
+// --- LOGOUT / WIPE DATA ---
+function clearSession() {
+    // Only call this if you explicitly want to force a new login
+    localStorage.removeItem('userProfile');
+    window.location.reload();
+}
+
+
+        
         // ==========================================
         // INITIALIZATION & UI TOGGLES
         // ==========================================
