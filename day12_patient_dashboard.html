@@ -13,7 +13,8 @@
     
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; } 
-        
+        /* Add this to hide the login view by default */
+        #login-view { display: none; }
         @keyframes pulse-soft-red {
             0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
             50% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
@@ -332,18 +333,21 @@
 // Call this function immediately when the script loads
 (function checkSession() {
     const savedProfile = localStorage.getItem('userProfile');
-    
-    // If we have data, auto-fill and initialize the socket
+    const loginView = document.getElementById('login-view');
+    const mainView = document.getElementById('main-view');
+
     if (savedProfile) {
+        // We found a session! Hide login, show dashboard.
         const profile = JSON.parse(savedProfile);
-        console.log("Resuming session for:", profile.name);
+        loginView.classList.add('hidden');
+        mainView.classList.remove('hidden');
         
-        // Hide the Login/Setup modal/overlay immediately
-        const loginOverlay = document.getElementById('login-overlay'); // Adjust ID as needed
-        if (loginOverlay) loginOverlay.style.display = 'none';
-        
-        // Initialize your dashboard connection using the restored data
+        // Initialize with the restored data
         initDashboard(profile); 
+    } else {
+        // No session found, explicitly show the login screen
+        loginView.classList.remove('hidden');
+        mainView.classList.add('hidden');
     }
 })();
 
