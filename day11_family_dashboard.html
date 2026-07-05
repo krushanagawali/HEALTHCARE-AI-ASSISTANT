@@ -462,21 +462,21 @@ function clearSession() {
 
 
 
-        window.onload = function() {
-        const savedData = localStorage.getItem('familyProfile');
-        if (savedData) {
-            const p = JSON.parse(savedData);
-            fName = p.name; fMobile = p.mobile; targetPatientId = p.pId;
+    //     window.onload = function() {
+    //     const savedData = localStorage.getItem('familyProfile');
+    //     if (savedData) {
+    //         const p = JSON.parse(savedData);
+    //         fName = p.name; fMobile = p.mobile; targetPatientId = p.pId;
             
-            socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
-            socket.on('connect', () => {
-                socket.emit('join_system', { room: 'room_' + targetPatientId, role: 'family', patient_id: targetPatientId, name: fName, mobile: fMobile });
-            });
-            setupSocketListeners();
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('main-view').classList.remove('hidden');
-        }
-    };
+    //         socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
+    //         socket.on('connect', () => {
+    //             socket.emit('join_system', { room: 'room_' + targetPatientId, role: 'family', patient_id: targetPatientId, name: fName, mobile: fMobile });
+    //         });
+    //         setupSocketListeners();
+    //         document.getElementById('login-view').classList.add('hidden');
+    //         document.getElementById('main-view').classList.remove('hidden');
+    //     }
+    // };
 
         
         
