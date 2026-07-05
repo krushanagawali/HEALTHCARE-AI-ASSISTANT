@@ -423,60 +423,60 @@
         const apiKey = ""; // Injected by environment for Gemini
 
 
-//verify local storage 
+// //verify local storage 
 
-        // --- PERSISTENCE ENGINE ---
-// Call this function immediately when the script loads
-(function checkSession() {
-    const savedProfile = localStorage.getItem('userProfile');
+//         // --- PERSISTENCE ENGINE ---
+// // Call this function immediately when the script loads
+// (function checkSession() {
+//     const savedProfile = localStorage.getItem('userProfile');
     
-    // If we have data, auto-fill and initialize the socket
-    if (savedProfile) {
-        const profile = JSON.parse(savedProfile);
-        console.log("Resuming session for:", profile.name);
+//     // If we have data, auto-fill and initialize the socket
+//     if (savedProfile) {
+//         const profile = JSON.parse(savedProfile);
+//         console.log("Resuming session for:", profile.name);
         
-        // Hide the Login/Setup modal/overlay immediately
-        const loginOverlay = document.getElementById('login-overlay'); // Adjust ID as needed
-        if (loginOverlay) loginOverlay.style.display = 'none';
+//         // Hide the Login/Setup modal/overlay immediately
+//         const loginOverlay = document.getElementById('login-overlay'); // Adjust ID as needed
+//         if (loginOverlay) loginOverlay.style.display = 'none';
         
-        // Initialize your dashboard connection using the restored data
-        initDashboard(profile); 
-    }
-})();
+//         // Initialize your dashboard connection using the restored data
+//         initDashboard(profile); 
+//     }
+// })();
 
-// --- SAVE PROFILE ON FIRST LOGIN ---
-function saveLogin(data) {
-    // Save the entire profile object as a single string
-    localStorage.setItem('userProfile', JSON.stringify(data));
-    initDashboard(data);
-}
+// // --- SAVE PROFILE ON FIRST LOGIN ---
+// function saveLogin(data) {
+//     // Save the entire profile object as a single string
+//     localStorage.setItem('userProfile', JSON.stringify(data));
+//     initDashboard(data);
+// }
 
-// --- LOGOUT / WIPE DATA ---
-function clearSession() {
-    // Only call this if you explicitly want to force a new login
-    localStorage.removeItem('userProfile');
-    window.location.reload();
-}
-
-
+// // --- LOGOUT / WIPE DATA ---
+// function clearSession() {
+//     // Only call this if you explicitly want to force a new login
+//     localStorage.removeItem('userProfile');
+//     window.location.reload();
+// }
 
 
 
-    //     window.onload = function() {
-    //     const savedData = localStorage.getItem('familyProfile');
-    //     if (savedData) {
-    //         const p = JSON.parse(savedData);
-    //         fName = p.name; fMobile = p.mobile; targetPatientId = p.pId;
+
+
+        window.onload = function() {
+        const savedData = localStorage.getItem('familyProfile');
+        if (savedData) {
+            const p = JSON.parse(savedData);
+            fName = p.name; fMobile = p.mobile; targetPatientId = p.pId;
             
-    //         socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
-    //         socket.on('connect', () => {
-    //             socket.emit('join_system', { room: 'room_' + targetPatientId, role: 'family', patient_id: targetPatientId, name: fName, mobile: fMobile });
-    //         });
-    //         setupSocketListeners();
-    //         document.getElementById('login-view').classList.add('hidden');
-    //         document.getElementById('main-view').classList.remove('hidden');
-    //     }
-    // };
+            socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
+            socket.on('connect', () => {
+                socket.emit('join_system', { room: 'room_' + targetPatientId, role: 'family', patient_id: targetPatientId, name: fName, mobile: fMobile });
+            });
+            setupSocketListeners();
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+        }
+    };
 
         
         
