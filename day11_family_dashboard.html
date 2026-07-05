@@ -24,20 +24,12 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* Custom Toggle Switch Styles */
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #6366f1; /* Indigo-500 */
-        }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #6366f1;
-        }
+        .toggle-checkbox:checked { right: 0; border-color: #6366f1; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #6366f1; }
         
-        @keyframes scan {
-            from { transform: translateX(-100%); }
-            to { transform: translateX(500%); }
-        }
+        @keyframes scan { from { transform: translateX(-100%); } to { transform: translateX(500%); } }
         
-        /* Fix for QR scanner UI to look good in dark mode */
+        /* Fix for QR scanner UI */
         #qr-reader { background: white; border-radius: 1rem; overflow: hidden; border: none !important; }
         #qr-reader img { margin: auto; }
         #qr-reader__dashboard_section_csr span, #qr-reader__dashboard_section_csr button { color: #333 !important; }
@@ -95,15 +87,12 @@
         
         <!-- Header -->
         <header class="flex justify-between items-center p-6 bg-slate-900 border-b border-slate-800 sticky top-0 z-10 shadow-md">
-            <!-- Top Left: 3 Line Menu -->
-            <button class="text-slate-400 hover:text-white transition">
+            <button onclick="showToast('Menu options coming soon.', 'info')" class="text-slate-400 hover:text-white transition">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             
-            <!-- Top Middle: Title -->
             <h1 class="text-xl font-bold text-white tracking-wide text-center">Family Dashboard<br><span id="header-patient-name" class="text-xs text-slate-500 font-normal">Not Connected</span></h1>
             
-            <!-- Top Right: Notification & Profile -->
             <div class="flex items-center space-x-4">
                 <button onclick="toggleNotifications()" class="relative text-slate-400 hover:text-white transition">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
@@ -138,16 +127,13 @@
                         <h2 class="text-white font-bold text-lg">See Live Patient Health</h2>
                         <p class="text-slate-400 text-xs">View real-time heart metrics</p>
                     </div>
-                    <!-- Toggle Switch -->
                     <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                         <input type="checkbox" name="toggle" id="health-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-all duration-300" onclick="toggleHealthData()"/>
                         <label for="health-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-600 cursor-pointer transition-colors duration-300"></label>
                     </div>
                 </div>
 
-                <!-- Hidden Live Health Data -->
                 <div id="live-health-data" class="hidden mt-6 space-y-4 pt-4 border-t border-slate-800">
-                    <!-- PPG Sensor -->
                     <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl">
                         <div>
                             <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">PPG Sensor Reading</h3>
@@ -161,7 +147,6 @@
                         </div>
                     </div>
 
-                    <!-- ECG Sensor -->
                     <div class="bg-slate-800 p-4 rounded-xl">
                         <div class="flex justify-between items-center mb-2">
                             <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
@@ -185,7 +170,6 @@
             <div class="pt-2">
                 <h2 class="text-lg font-bold text-white mb-4">Emergency Alerts</h2>
                 
-                <!-- Safe State Placeholder -->
                 <div id="idle-state" class="bg-slate-900/50 rounded-2xl p-6 border border-slate-800 text-center shadow-inner">
                     <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800 mb-4">
                         <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
@@ -193,7 +177,6 @@
                     <p class="text-slate-500">No active alerts. Patient is safe.</p>
                 </div>
 
-                <!-- Emergency Alert Box (Hidden) -->
                 <div id="alert-state" class="hidden">
                     <div class="bg-red-950/80 border-2 border-red-500 rounded-3xl p-6 emergency-pulse shadow-2xl">
                         <div class="text-center mb-6 border-b border-red-800 pb-4">
@@ -202,7 +185,6 @@
                         </div>
 
                         <div class="space-y-4">
-                            <!-- Status Updates -->
                             <div class="bg-black/40 rounded-xl p-4 border border-red-900/50">
                                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Live System Actions</h3>
                                 <ul class="space-y-3 text-sm">
@@ -221,7 +203,6 @@
                                 </ul>
                             </div>
 
-                            <!-- GPS Data -->
                             <div class="bg-black/40 rounded-xl p-4 border border-red-900/50">
                                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Location & Routing Details</h3>
                                 <p class="text-[10px] font-bold text-slate-500 uppercase mb-1">Patient Location (Origin)</p>
@@ -249,7 +230,6 @@
                     </div>
                 </div>
 
-                <!-- Session Closed State -->
                 <div id="resolved-state" class="hidden bg-slate-900 rounded-2xl p-6 border border-slate-700 text-center shadow-xl mt-4">
                     <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 mb-4">
                         <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
@@ -266,7 +246,6 @@
     <!-- 3. PROFILE VIEW                            -->
     <!-- ========================================== -->
     <div id="profile-view" class="hidden w-full max-w-md md:max-w-2xl min-h-screen bg-slate-950 flex flex-col">
-        <!-- Profile Header -->
         <header class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800 sticky top-0">
             <button onclick="closeProfile()" class="text-slate-400 hover:text-white flex items-center transition font-semibold">
                 <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center mr-2 border border-slate-600">
@@ -276,13 +255,11 @@
             </button>
             
             <div class="flex items-center space-x-4">
-                <!-- Location Tracker Indicator -->
                 <div id="gps-status-indicator" class="flex items-center space-x-1 text-slate-400 text-xs font-bold bg-slate-800 px-2 py-1 rounded transition-colors duration-300">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
                     <span>Location: OFF (Saving Battery)</span>
                 </div>
                 
-                <!-- QR Scanner Button -->
                 <button onclick="openQRScanner()" class="bg-indigo-600 p-2 rounded-lg hover:bg-indigo-500 transition shadow-[0_0_10px_rgba(99,102,241,0.5)] flex items-center text-white text-xs font-bold">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z"></path></svg>
                     Scan Patient
@@ -291,7 +268,6 @@
         </header>
 
         <main class="p-6 flex-1 space-y-6">
-            <!-- Family Information -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                 <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">Family Information (You)</h2>
                 <div class="space-y-3 text-sm">
@@ -305,7 +281,6 @@
                 </div>
             </div>
 
-            <!-- Linked Patient Information -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                 <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">Patient Information</h2>
                 
@@ -325,7 +300,6 @@
             </div>
         </main>
 
-        <!-- Footer Buttons -->
         <footer class="p-6 flex justify-between items-center border-t border-slate-800 bg-slate-900 mt-auto">
             <button onclick="logout()" class="text-slate-400 hover:text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-slate-800 transition">
                 Log Out
@@ -351,7 +325,6 @@
         
         <p class="text-slate-400 text-sm mt-6 text-center">Point your camera at the Patient's screen to establish a secure link.</p>
         
-        <!-- Manual fallback for testing environments without cameras -->
         <div class="mt-8 pt-4 border-t border-slate-800 w-full max-w-xs">
             <p class="text-xs text-slate-500 text-center mb-2">Or enter ID manually:</p>
             <div class="flex">
@@ -389,7 +362,7 @@
 
         <div class="p-4 bg-slate-900 border-t border-slate-800">
             <form onsubmit="handleAIChat(event)" class="relative">
-                <input type="text" id="ai-input" autocomplete="off" placeholder="Ask about their health..." class="w-full bg-slate-800 text-white rounded-full py-3 pl-5 pr-12 border border-slate-700 focus:border-indigo-500 outline-none">
+                <input type="text" id="ai-input" autocomplete="off" placeholder="Message assistant..." class="w-full bg-slate-800 text-white rounded-full py-3 pl-5 pr-12 border border-slate-700 focus:border-indigo-500 outline-none">
                 <button type="submit" class="absolute right-2 top-1.5 p-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-full text-white transition shadow-md">
                     <svg class="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
                 </button>
@@ -414,72 +387,55 @@
         
         let connectedPatientId = null;
         let currentGpsLocation = "";
-        const hospitalLocation = "Civil Hospital, Akola, Maharashtra"; // Set default to Akola
+        const hospitalLocation = "Civil Hospital, Akola, Maharashtra"; 
         
         let liveHealthInterval = null;
         let html5QrcodeScanner = null;
         let gpsActive = false;
 
-        const apiKey = ""; // Injected by environment for Gemini
+        const apiKey = ""; 
 
-
-// //verify local storage 
-
-//         // --- PERSISTENCE ENGINE ---
-// // Call this function immediately when the script loads
-// (function checkSession() {
-//     const savedProfile = localStorage.getItem('userProfile');
-    
-//     // If we have data, auto-fill and initialize the socket
-//     if (savedProfile) {
-//         const profile = JSON.parse(savedProfile);
-//         console.log("Resuming session for:", profile.name);
-        
-//         // Hide the Login/Setup modal/overlay immediately
-//         const loginOverlay = document.getElementById('login-overlay'); // Adjust ID as needed
-//         if (loginOverlay) loginOverlay.style.display = 'none';
-        
-//         // Initialize your dashboard connection using the restored data
-//         initDashboard(profile); 
-//     }
-// })();
-
-// // --- SAVE PROFILE ON FIRST LOGIN ---
-// function saveLogin(data) {
-//     // Save the entire profile object as a single string
-//     localStorage.setItem('userProfile', JSON.stringify(data));
-//     initDashboard(data);
-// }
-
-// // --- LOGOUT / WIPE DATA ---
-// function clearSession() {
-//     // Only call this if you explicitly want to force a new login
-//     localStorage.removeItem('userProfile');
-//     window.location.reload();
-// }
-
-
-
-
-
+        // ==========================================
+        // 1. AUTO-RESTORE FROM BROWSER MEMORY
+        // ==========================================
         window.onload = function() {
-        const savedData = localStorage.getItem('familyProfile');
-        if (savedData) {
-            const p = JSON.parse(savedData);
-            fName = p.name; fMobile = p.mobile; targetPatientId = p.pId;
-            
-            socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
-            socket.on('connect', () => {
-                socket.emit('join_system', { room: 'room_' + targetPatientId, role: 'family', patient_id: targetPatientId, name: fName, mobile: fMobile });
-            });
-            setupSocketListeners();
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('main-view').classList.remove('hidden');
-        }
-    };
+            const savedData = localStorage.getItem('familyProfile');
+            if (savedData) {
+                const p = JSON.parse(savedData);
+                
+                // Restore variables
+                currentFamilyId = p.fid;
+                fName = p.name;
+                fMobile = p.mobile;
+                fAddress = p.address;
+                
+                // Update UI Profile Data
+                document.getElementById('prof-fid').innerText = currentFamilyId;
+                document.getElementById('prof-fname').innerText = fName;
+                document.getElementById('prof-fmobile').innerText = fMobile;
+                document.getElementById('prof-faddress').innerText = fAddress;
 
-        
-        
+                if (typeof io !== 'undefined') {
+                    socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
+                    
+                    socket.on('connect', () => {
+                        console.log("Connected to Server!");
+                        // Reconnect to patient if we linked previously
+                        const savedPatient = localStorage.getItem('connectedPatientId');
+                        if (savedPatient) {
+                            connectToPatient(savedPatient);
+                        }
+                    });
+                    
+                    setupSocketListeners();
+                }
+
+                // Hide login, jump to main dashboard
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('main-view').classList.remove('hidden');
+            }
+        };
+
         // ==========================================
         // INITIALIZATION & UI TOGGLES
         // ==========================================
@@ -491,7 +447,6 @@
                 const cCode = document.getElementById('family-country-code').value;
                 fAddress = document.getElementById('family-address').value.trim();
 
-                // Relaxed the strict 10-digit rule so it doesn't block you during testing
                 if(!fName || !rawMobile || !fAddress) {
                     alert("Please fill in all details (Name, Mobile, Home Address) to create your profile.");
                     return;
@@ -506,11 +461,17 @@
                 document.getElementById('prof-fmobile').innerText = fMobile;
                 document.getElementById('prof-faddress').innerText = fAddress;
 
-                localStorage.setItem('familyProfile', JSON.stringify({name: fName, mobile: fMobile, pId: targetPatientId}));
+                // SAVE TO BROWSER MEMORY (so refresh works)
+                localStorage.setItem('familyProfile', JSON.stringify({
+                    fid: currentFamilyId, 
+                    name: fName, 
+                    mobile: fMobile, 
+                    address: fAddress
+                }));
 
-                // Connect to server (Change to deployed URL if not running locally)
+                // Connect to server
                 if (typeof io !== 'undefined') {
-                    socket = io('https://healthcare-ai-assistant-d3p8.onrender.com'); 
+                    socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
                     
                     socket.on('connect', () => {
                         console.log("Connected to Server!");
@@ -548,10 +509,9 @@
 
         function deleteAccount() {
             if(confirm("WARNING: This will permanently delete your profile. Proceed?")) {
+                localStorage.clear(); // Clear all memory
                 alert("Account deleted.");
-               localStorage.removeItem('familyProfile');
                 window.location.reload();
-        }
             }
         }
 
@@ -602,7 +562,7 @@
                 patient_id: pId,
                 name: fName,
                 mobile: fMobile,
-                address: fAddress // Passed along for patient's UI
+                address: fAddress 
             });
         }
 
@@ -614,6 +574,9 @@
             // Success: Server verified patient exists
             socket.on('link_success', (data) => {
                 connectedPatientId = data.patient_id || "PT-LINKED";
+                
+                // Save link to browser memory
+                localStorage.setItem('connectedPatientId', connectedPatientId);
                 
                 // Update Main Dashboard Header
                 document.getElementById('header-patient-name').innerText = `Linked to: ${data.patient_name} (${connectedPatientId})`;
@@ -675,12 +638,12 @@
                 icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
                 text.innerText = "Ambulance dispatched and en route!";
 
-                // 2025-12-25 Requirement: Auto-delete/purge sensitive data when document logic resolves
+                // Purge data automatically after dispatch for privacy
                 setTimeout(() => {
                     if (!document.getElementById('alert-state').classList.contains('hidden')) {
                         triggerPrivacyLock("Ambulance dispatched and en route.");
                     }
-                }, 10000); // 10 seconds after dispatch
+                }, 10000); 
             });
         }
 
@@ -890,7 +853,7 @@
         // AUTO-WIPE PRIVACY ON PRINT
         // ==========================================
         window.addEventListener('beforeprint', () => {
-            // Enforces strict data privacy. If the screen is printed (e.g., at an untrusted shop),
+            // Enforces strict data privacy. If the screen is printed,
             // all sensitive medical telemetry is instantly wiped from the DOM.
             triggerPrivacyLock("Security Protocol: Document printing detected.");
             document.body.innerHTML = "<div style='height: 100vh; display: flex; align-items: center; justify-content: center; background: #0f172a; color: white;'><h1 style='font-family: sans-serif;'>Data Purged for Patient Privacy</h1></div>";
