@@ -395,15 +395,16 @@
 
         const apiKey = ""; 
 
-      // --- PERSISTENCE ENGINE (FAMILY) ---
+     // ==========================================
+        // 1. PERSISTENCE ENGINE (FAMILY)
+        // ==========================================
         (function checkSession() {
-            const savedProfile = localStorage.getItem('familyProfile');
+            const savedData = localStorage.getItem('familyProfile');
             
-            if (savedProfile) {
-                const profile = JSON.parse(savedProfile);
-                console.log("Resuming session for:", profile.name);
+            if (savedData) {
+                const profile = JSON.parse(savedData);
                 
-                // Hide login immediately
+                // Hide login screen, show dashboard instantly
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-view').classList.remove('hidden');
                 
@@ -422,7 +423,6 @@
                 if (typeof io !== 'undefined') {
                     socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
                     socket.on('connect', () => {
-                        console.log("Connected to Server automatically!");
                         // Reconnect to patient if we linked previously
                         const savedPatientId = localStorage.getItem('connectedPatientId');
                         if(savedPatientId) {
@@ -434,18 +434,24 @@
             }
         })();
 
-        // --- LOGOUT / WIPE DATA ---
-        function clearSession(message) {
-            if(confirm(message)) {
-                localStorage.removeItem('familyProfile');
-                localStorage.removeItem('connectedPatientId'); // Clears the linked patient memory too
-                window.location.reload();
+        // ==========================================
+        // LOGOUT & WIPE DATA 
+        // ==========================================
+        function logout() {
+            if(confirm("Are you sure you want to log out?")) {
+                localStorage.removeItem('familyProfile'); // DELETES FAMILY MEMORY
+                localStorage.removeItem('connectedPatientId'); // DELETES PATIENT LINK
+                window.location.reload(); // RELOADS THE LOGIN SCREEN
             }
         }
 
-        function logout() { clearSession("Are you sure you want to log out?"); }
-        function deleteAccount() { clearSession("WARNING: This will permanently delete your profile. Proceed?"); }
-        
+        function deleteAccount() {
+            if(confirm("WARNING: This will permanently delete your profile. Proceed?")) {
+                localStorage.removeItem('familyProfile');
+                localStorage.removeItem('connectedPatientId');
+                window.location.reload();
+            }
+        }  
 
         // ==========================================
         // INITIALIZATION & UI TOGGLES
