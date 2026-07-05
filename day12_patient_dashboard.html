@@ -326,62 +326,53 @@
         const apiKey = ""; 
 
 
-// ==========================================
-        // PERSISTENCE ENGINE (PATIENT)
-        // ==========================================
-        
-        // 1. Check for existing session immediately
-        window.onload = function checkSession() {
+// --- PERSISTENCE ENGINE (PATIENT) ---
+        (function checkSession() {
             const savedProfile = localStorage.getItem('patientProfile');
             
             if (savedProfile) {
                 const profile = JSON.parse(savedProfile);
                 console.log("Resuming session for:", profile.name);
                 
-                // Hide login, show dashboard instantly
+                // Hide login immediately
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-view').classList.remove('hidden');
                 
-                // Initialize connection with restored data
-                restorePatientSession(profile); 
-            }
-        };
+                // Restore variables
+                currentPatientId = profile.id;
+                pName = profile.name;
+                pMobile = profile.mobile;
+                pAddress = profile.address;
 
-        // 2. The function that actually restores everything
-        function restorePatientSession(profile) {
-            currentPatientId = profile.id;
-            pName = profile.name;
-            pMobile = profile.mobile;
-            pAddress = profile.address;
+                // Update UI Profile Data
+                document.getElementById('prof-pid').innerText = currentPatientId;
+                document.getElementById('prof-name').innerText = pName;
+                document.getElementById('prof-mobile').innerText = pMobile;
+                document.getElementById('prof-address').innerText = pAddress;
+                document.getElementById('qr-id-display').innerText = currentPatientId;
 
-            // Update UI
-            document.getElementById('prof-pid').innerText = currentPatientId;
-            document.getElementById('prof-name').innerText = pName;
-            document.getElementById('prof-mobile').innerText = pMobile;
-            document.getElementById('prof-address').innerText = pAddress;
-            document.getElementById('qr-id-display').innerText = currentPatientId;
+                // Restore QR Codes
+                document.getElementById("qrcode-small").innerHTML = ""; 
+                new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
+                document.getElementById("qrcode-large").innerHTML = ""; 
+                new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
 
-            // Re-render QR Codes
-            document.getElementById("qrcode-small").innerHTML = ""; 
-            new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
-            document.getElementById("qrcode-large").innerHTML = ""; 
-            new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
-
-            // Connect to server
-            if (typeof io !== 'undefined') {
-                socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
-                socket.on('connect', () => {
-                    socket.emit('join_system', {
-                        room: 'room_' + currentPatientId, role: 'patient', patient_id: currentPatientId,
-                        name: pName, mobile: pMobile, address: pAddress
+                // Initialize connection
+                if (typeof io !== 'undefined') {
+                    socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
+                    socket.on('connect', () => {
+                        socket.emit('join_system', {
+                            room: 'room_' + currentPatientId, role: 'patient', patient_id: currentPatientId,
+                            name: pName, mobile: pMobile, address: pAddress
+                        });
                     });
-                });
-                setupSocketListeners();
+                    setupSocketListeners();
+                }
+                startSensorSimulation();
             }
-            startSensorSimulation();
-        }
+        })();
 
-        // 3. Clear Session & Wipe Data
+        // --- LOGOUT / WIPE DATA ---
         function clearSession(message) {
             if(confirm(message)) {
                 localStorage.removeItem('patientProfile');
@@ -389,7 +380,6 @@
             }
         }
 
-        // Point existing buttons to the new clear function
         function logout() { clearSession("Are you sure you want to log out?"); }
         function deleteAccount() { clearSession("WARNING: This will permanently delete your profile. Proceed?"); }
         
