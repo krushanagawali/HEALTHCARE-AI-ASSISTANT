@@ -395,46 +395,69 @@
 
         const apiKey = ""; 
 
+       // ==========================================
+        // PERSISTENCE ENGINE (FAMILY)
         // ==========================================
-        // 1. AUTO-RESTORE FROM BROWSER MEMORY
-        // ==========================================
-        window.onload = function() {
-            const savedData = localStorage.getItem('familyProfile');
-            if (savedData) {
-                const p = JSON.parse(savedData);
+        
+        // 1. Check for existing session immediately
+        window.onload = function checkSession() {
+            const savedProfile = localStorage.getItem('familyProfile');
+            
+            if (savedProfile) {
+                const profile = JSON.parse(savedProfile);
+                console.log("Resuming session for:", profile.name);
                 
-                // Restore variables
-                currentFamilyId = p.fid;
-                fName = p.name;
-                fMobile = p.mobile;
-                fAddress = p.address;
-                
-                // Update UI Profile Data
-                document.getElementById('prof-fid').innerText = currentFamilyId;
-                document.getElementById('prof-fname').innerText = fName;
-                document.getElementById('prof-fmobile').innerText = fMobile;
-                document.getElementById('prof-faddress').innerText = fAddress;
-
-                if (typeof io !== 'undefined') {
-                    socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] });
-                    
-                    socket.on('connect', () => {
-                        console.log("Connected to Server!");
-                        // Reconnect to patient if we linked previously
-                        const savedPatient = localStorage.getItem('connectedPatientId');
-                        if (savedPatient) {
-                            connectToPatient(savedPatient);
-                        }
-                    });
-                    
-                    setupSocketListeners();
-                }
-
-                // Hide login, jump to main dashboard
+                // Hide login, show dashboard instantly
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-view').classList.remove('hidden');
+                
+                // Initialize connection with restored data
+                restoreFamilySession(profile); 
             }
         };
+
+        // 2. The function that actually restores everything
+        function restoreFamilySession(profile) {
+            currentFamilyId = profile.fid;
+            fName = profile.name;
+            fMobile = profile.mobile;
+            fAddress = profile.address;
+
+            // Update UI
+            document.getElementById('prof-fid').innerText = currentFamilyId;
+            document.getElementById('prof-fname').innerText = fName;
+            document.getElementById('prof-fmobile').innerText = fMobile;
+            document.getElementById('prof-faddress').innerText = fAddress;
+
+            if (typeof io !== 'undefined') {
+                socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
+                
+                socket.on('connect', () => {
+                    console.log("Connected to Server automatically!");
+                    // Auto-reconnect to patient if they were previously linked
+                    const savedPatientId = localStorage.getItem('connectedPatientId');
+                    if(savedPatientId) {
+                        connectToPatient(savedPatientId);
+                    }
+                });
+                setupSocketListeners();
+            }
+        }
+
+        // 3. Clear Session & Wipe Data
+        function clearSession(message) {
+            if(confirm(message)) {
+                localStorage.removeItem('familyProfile');
+                localStorage.removeItem('connectedPatientId'); // Clear linked patient too
+                window.location.reload();
+            }
+        }
+
+        // Point existing buttons to the new clear function
+        function logout() { clearSession("Are you sure you want to log out?"); }
+        function deleteAccount() { clearSession("WARNING: This will permanently delete your profile. Proceed?"); }
+
+        
 
         // ==========================================
         // INITIALIZATION & UI TOGGLES
