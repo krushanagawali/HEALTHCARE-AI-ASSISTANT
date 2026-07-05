@@ -326,18 +326,19 @@
         const apiKey = ""; 
 
 
-// --- PERSISTENCE ENGINE (PATIENT) ---
+// ==========================================
+        // 1. PERSISTENCE ENGINE (PATIENT)
+        // ==========================================
         (function checkSession() {
-            const savedProfile = localStorage.getItem('patientProfile');
+            const savedData = localStorage.getItem('patientProfile');
             
-            if (savedProfile) {
-                const profile = JSON.parse(savedProfile);
-                console.log("Resuming session for:", profile.name);
+            if (savedData) {
+                const profile = JSON.parse(savedData);
                 
-                // Hide login immediately
+                // Hide login screen, show dashboard instantly
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-view').classList.remove('hidden');
-                
+
                 // Restore variables
                 currentPatientId = profile.id;
                 pName = profile.name;
@@ -351,13 +352,14 @@
                 document.getElementById('prof-address').innerText = pAddress;
                 document.getElementById('qr-id-display').innerText = currentPatientId;
 
-                // Restore QR Codes
+                // Generate QR Codes
                 document.getElementById("qrcode-small").innerHTML = ""; 
                 new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
+                
                 document.getElementById("qrcode-large").innerHTML = ""; 
                 new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
 
-                // Initialize connection
+                // Initialize connection to Render server
                 if (typeof io !== 'undefined') {
                     socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
                     socket.on('connect', () => {
@@ -372,16 +374,22 @@
             }
         })();
 
-        // --- LOGOUT / WIPE DATA ---
-        function clearSession(message) {
-            if(confirm(message)) {
-                localStorage.removeItem('patientProfile');
+        // ==========================================
+        // LOGOUT & WIPE DATA 
+        // ==========================================
+        function logout() { 
+            if(confirm("Are you sure you want to log out?")) {
+                localStorage.removeItem('patientProfile'); // THIS DELETES THE MEMORY
+                window.location.reload(); // THIS RELOADS TO THE LOGIN SCREEN
+            }
+        }
+        
+        function deleteAccount() {
+            if(confirm("WARNING: This will permanently delete your profile. Proceed?")) {
+                localStorage.removeItem('patientProfile'); // THIS DELETES THE MEMORY
                 window.location.reload();
             }
         }
-
-        function logout() { clearSession("Are you sure you want to log out?"); }
-        function deleteAccount() { clearSession("WARNING: This will permanently delete your profile. Proceed?"); }
         
         // ==========================================
         // INITIALIZATION & UI TOGGLES
