@@ -3,7 +3,7 @@ from bleak import BleakClient
 
 # --- REPLACE THESE WITH YOUR NRF CONNECT DATA ---
 MAC_ADDRESS = "95-AF-30-EF-51-03"
-HR_UUID = "5E706266T0-B687034531"
+HR_UUID = "0x2902"
 
 async def run(address):
     print(f"Connecting to {address}...")
