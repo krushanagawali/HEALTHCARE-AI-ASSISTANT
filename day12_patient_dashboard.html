@@ -690,8 +690,11 @@
                 
                 
                 // WITH THIS UPDATED FILTER:
+// REPLACE THE PREVIOUS requestDevice BLOCK WITH THIS:
 const device = await navigator.bluetooth.requestDevice({
-    acceptAllDevices: true,
+    filters: [
+        { namePrefix: 'FB' } // Forces Chrome to bypass filters for devices starting with "FB"
+    ],
     optionalServices: [HR_SERVICE_UUID, 'heart_rate', 0x180D]
 });
 
