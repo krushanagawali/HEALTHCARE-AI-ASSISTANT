@@ -1,11 +1,17 @@
+import os
+import sqlite3
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, join_room
 from flask_cors import CORS
-import sqlite3
 
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+
+SECRET_KEY = "my-secret-watch-token"
+
+# In-memory store for the latest telemetry reading per patient
+latest_vitals_cache = {}
 
 # ==========================================
 # 1. DATABASE SETUP
@@ -14,11 +20,11 @@ def init_db():
     conn = sqlite3.connect('hospital.db')
     c = conn.cursor()
     
-    # Patients Table (Now includes Address)
+    # Patients Table
     c.execute('''CREATE TABLE IF NOT EXISTS patients 
                  (patient_id TEXT PRIMARY KEY, patient_name TEXT, mobile TEXT, address TEXT)''')
     
-    # Family Table (Now includes Address)
+    # Family Table
     c.execute('''CREATE TABLE IF NOT EXISTS family 
                  (family_id INTEGER PRIMARY KEY AUTOINCREMENT, patient_id TEXT, contact_name TEXT, mobile TEXT, address TEXT)''')
     
@@ -28,11 +34,9 @@ def init_db():
     
     conn.commit()
     conn.close()
-    print("🗄️ Real-world Database initialized with Doctor, Patient, and Family tables!")
+    print("🗄️ Database initialized with Doctor, Patient, and Family tables.")
 
 init_db()
-
-SECRET_KEY = "my-secret-watch-token"
 
 # ==========================================
 # 2. MANAGING PRIVATE ROOMS & DB SAVING
@@ -55,7 +59,6 @@ def on_join(data):
         landline = data.get('landline', 'N/A')
         address = data.get('address', 'N/A')
         
-        # Save Doctor to Database
         c.execute('''INSERT OR REPLACE INTO doctors (doctor_id, doctor_name, hospital_name, mobile, landline, address) 
                      VALUES (?, ?, ?, ?, ?, ?)''', (doc_id, name, hosp, mobile, landline, address))
         print(f"🩺 Doctor {name} saved to database.")
@@ -66,10 +69,9 @@ def on_join(data):
         mobile = data.get('mobile')
         address = data.get('address', 'N/A')
         
-        # Save Patient to Database
-        c.execute('''INSERT OR REPLACE INTO patients (patient_id, patient_name, mobile, address) VALUES (?, ?, ?, ?)''', (patient_id, name, mobile, address))
+        c.execute('''INSERT OR REPLACE INTO patients (patient_id, patient_name, mobile, address) 
+                     VALUES (?, ?, ?, ?)''', (patient_id, name, mobile, address))
         
-        # Fetch Family
         c.execute('''SELECT contact_name, mobile, address FROM family WHERE patient_id = ?''', (patient_id,))
         existing_family = c.fetchall()
         
@@ -82,44 +84,78 @@ def on_join(data):
         mobile = data.get('mobile')
         address = data.get('address', 'N/A')
         
-        # Check if Patient Exists
         c.execute('''SELECT patient_name, mobile, address FROM patients WHERE patient_id = ?''', (patient_id,))
         patient = c.fetchone()
         
         if patient:
-            # Save Family to Database
             c.execute('''SELECT * FROM family WHERE patient_id = ? AND mobile = ?''', (patient_id, mobile))
             if not c.fetchone():
-                c.execute("INSERT INTO family (patient_id, contact_name, mobile, address) VALUES (?, ?, ?, ?)", (patient_id, name, mobile, address))
+                c.execute("INSERT INTO family (patient_id, contact_name, mobile, address) VALUES (?, ?, ?, ?)", 
+                          (patient_id, name, mobile, address))
             
             socketio.emit('family_connected', {'name': name, 'mobile': mobile, 'address': address}, to=room_name)
-            
             socketio.emit('link_success', {
                 'patient_id': patient_id,
                 'patient_name': patient[0],
                 'patient_mobile': patient[1],
                 'patient_address': patient[2]
             }, to=request.sid)
-            print(f"👨‍👩‍👧 Family member {name} securely linked to patient {patient[0]}")
+            print(f"👨‍👩‍👧 Family member {name} linked to patient {patient[0]}")
         else:
-            socketio.emit('link_error', {'message': 'Patient ID not found! The patient must activate their wearable first.'}, to=request.sid)
+            socketio.emit('link_error', {'message': 'Patient ID not found! Patient must activate their wearable first.'}, to=request.sid)
             print(f"❌ Rejected family login: Patient {patient_id} does not exist.")
 
     conn.commit()
     conn.close()
 
 # ==========================================
-# 3. ROUTING THE EMERGENCY
+# 3. LIVE WEARABLE VITALS TELEMETRY (NEW)
+# ==========================================
+@app.route('/update_vitals', methods=['POST'])
+def update_vitals():
+    """Receives live heart rate from ble_reader.py and broadcasts it immediately."""
+    incoming = request.get_json(force=True, silent=True) or {}
+    
+    patient_id = incoming.get('patient_id', 'PATIENT_DEFAULT')
+    heart_rate = incoming.get('heart_rate')
+    
+    if heart_rate is None:
+        return jsonify({"error": "Missing heart_rate"}), 400
+
+    payload = {
+        "patient_id": patient_id,
+        "heart_rate": int(heart_rate),
+        "status": incoming.get('status', 'nominal'),
+        "timestamp": incoming.get('timestamp')
+    }
+
+    # Store in memory for instant polling
+    latest_vitals_cache[patient_id] = payload
+
+    # Broadcast to patient room and doctor channel via WebSockets
+    socketio.emit('live_vitals', payload, to=f'room_{patient_id}')
+    socketio.emit('live_vitals', payload, to='room_doctors')
+
+    return jsonify({"status": "success", "received": payload}), 200
+
+@app.route('/get_vitals/<patient_id>', methods=['GET'])
+def get_vitals(patient_id):
+    """Fallback endpoint for frontends polling vitals via HTTP."""
+    data = latest_vitals_cache.get(patient_id)
+    if data:
+        return jsonify(data), 200
+    return jsonify({"patient_id": patient_id, "heart_rate": 0, "status": "waiting_for_signal"}), 200
+
+# ==========================================
+# 4. ROUTING THE EMERGENCY DISPATCH
 # ==========================================
 @app.route('/emergency_dispatch', methods=['POST'])
 def receive_emergency():
-    incoming_data = request.json
+    incoming_data = request.json or {}
     
-    # FIXED: ge8t typo corrected to get
     if incoming_data.get('token') != SECRET_KEY:
         return jsonify({"error": "Unauthorized"}), 403
     
-    # FIXED: incoming_d ukata typo corrected to incoming_data
     patient_id = incoming_data.get('patient_id')
     print(f"\n🚨 [SERVER] RECEIVED STEMI ALERT FOR {patient_id}!")
     
@@ -132,15 +168,38 @@ def receive_emergency():
 def handle_dispatch():
     print("\n🚑 AMBULANCE DISPATCHED BY DOCTOR! Notifying network...")
     socketio.emit('ambulance_dispatched')
-#4.verify storage
+
+# ==========================================
+# 5. SESSION VERIFICATION (FIXED SYNTAX)
+# ==========================================
 @app.route('/verify_session', methods=['POST'])
 def verify():
-    data = request.json
-    # Logic to check if this user exists in your sqlite hospital.db
-    # Return the user's saved info so the dashboard can re-populate its UI
-    return jsonify({"status": "active", "profile": ...})
+    data = request.json or {}
+    patient_id = data.get('patient_id')
 
+    conn = sqlite3.connect('hospital.db')
+    c = conn.cursor()
+    c.execute('SELECT patient_id, patient_name, mobile, address FROM patients WHERE patient_id = ?', (patient_id,))
+    patient = c.fetchone()
+    conn.close()
 
+    if patient:
+        return jsonify({
+            "status": "active",
+            "profile": {
+                "patient_id": patient[0],
+                "name": patient[1],
+                "mobile": patient[2],
+                "address": patient[3]
+            }
+        }), 200
+
+    return jsonify({"status": "not_found", "profile": None}), 404
+
+# ==========================================
+# 6. RUNNER (RENDER-AWARE PORT)
+# ==========================================
 if __name__ == '__main__':
-    print("🚀 Middleman Server is running on port 5000...")
-    socketio.run(app, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Middleman Server is running on port {port}...")
+    socketio.run(app, host='0.0.0.0', port=port)
