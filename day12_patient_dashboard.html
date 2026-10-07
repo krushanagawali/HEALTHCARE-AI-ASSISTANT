@@ -688,11 +688,12 @@
             try {
                 statusText.innerText = "Status: Scanning for Fire-Boltt...";
                 
-                // Request Bluetooth Device
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [HR_SERVICE_UUID] }],
-                    optionalServices: [HR_SERVICE_UUID]
-                });
+                
+                // WITH THIS UPDATED FILTER:
+const device = await navigator.bluetooth.requestDevice({
+    acceptAllDevices: true,
+    optionalServices: [HR_SERVICE_UUID, 'heart_rate', 0x180D]
+});
 
                 statusText.innerText = "Status: Connecting to " + device.name + "...";
 
