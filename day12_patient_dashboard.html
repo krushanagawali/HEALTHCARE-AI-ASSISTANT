@@ -119,18 +119,26 @@
                 </div>
             </div>
 
-            <!-- PPG Sensor Reading -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md flex justify-between items-center">
-                <div>
-                    <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider mb-1">PPG Sensor Reading</h3>
-                    <div class="flex items-baseline space-x-2">
-                        <span id="ppg-bpm" class="text-4xl font-mono font-bold text-white">72</span>
-                        <span class="text-slate-500 font-bold">BPM</span>
+            <!-- PPG Sensor Reading (UPDATED FOR BLUETOOTH) -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md flex flex-col">
+                <div class="flex justify-between items-center w-full mb-4">
+                    <div>
+                        <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider mb-1">PPG Sensor Reading</h3>
+                        <div class="flex items-baseline space-x-2">
+                            <span id="ppg-bpm" class="text-4xl font-mono font-bold text-white">--</span>
+                            <span class="text-slate-500 font-bold">BPM</span>
+                        </div>
+                    </div>
+                    <div class="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center animate-pulse">
+                        <svg class="w-8 h-8 text-rose-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                     </div>
                 </div>
-                <div class="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center animate-pulse">
-                    <svg class="w-8 h-8 text-rose-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                </div>
+                
+                <!-- NEW: Bluetooth Connection UI -->
+                <button id="connectWatchBtn" onclick="connectFireBoltt()" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-emerald-500 mt-2">
+                    🔗 Connect Fire-Boltt Watch
+                </button>
+                <p id="connectionStatus" class="text-xs text-slate-500 text-center mt-3 font-medium">Status: Disconnected</p>
             </div>
 
             <!-- ECG Sensor Reading -->
@@ -322,6 +330,9 @@
         let pMobile = "";
         let pAddress = "";
         let familyCounter = 1;
+        
+        // WATCH CONNECTION STATE
+        let watchConnected = false; 
 
         const apiKey = " "; 
 
@@ -467,13 +478,7 @@
         function openQRFullscreen() { document.getElementById('qr-modal').classList.remove('hidden'); }
         function closeQRFullscreen() { document.getElementById('qr-modal').classList.add('hidden'); }
         function toggleNotifications() { alert("No new notifications."); }
-        function logout() { if(confirm("Are you sure?")) window.location.reload(); }
-        function deleteAccount() {
-        if(confirm("Proceed?")) {
-            localStorage.removeItem('patientProfile');
-            window.location.reload();
-        }
-    }
+        
         // ==========================================
         // SOCKET.IO LISTENERS
         // ==========================================
@@ -531,8 +536,11 @@
 
         function startSensorSimulation() {
             setInterval(() => {
-                const bpm = Math.floor(Math.random() * (75 - 70 + 1) + 70);
-                document.getElementById('ppg-bpm').innerText = bpm;
+                // Only generate fake numbers if real watch is disconnected
+                if (!watchConnected) {
+                    const bpm = Math.floor(Math.random() * (75 - 70 + 1) + 70);
+                    document.getElementById('ppg-bpm').innerText = bpm;
+                }
                 const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
                 document.getElementById('ecg-mv').innerText = mv;
             }, 2000);
@@ -648,7 +656,6 @@
                 "token": "my-secret-watch-token" 
             };
 
-            // FIXED: Pointing directly to the secure Render backend instead of local 127.0.0.1
             fetch('https://healthcare-ai-assistant-d3p8.onrender.com/emergency_dispatch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -659,6 +666,92 @@
                 console.error(e);
                 alert("Network Routing Error. Please verify your Render server is running.");
             });
+        }
+
+        // ==========================================
+        // WEB BLUETOOTH API (FIRE-BOLTT CONNECTION)
+        // ==========================================
+        const HR_SERVICE_UUID = 0x180D; 
+        const HR_CHAR_UUID    = 0x2A37; 
+        const RENDER_ENDPOINT = "https://healthcare-ai-assistant-d3p8.onrender.com/update_vitals";
+
+        async function connectFireBoltt() {
+            const statusText = document.getElementById("connectionStatus");
+            const bpmDisplay = document.getElementById("ppg-bpm");
+            const connectBtn = document.getElementById("connectWatchBtn");
+
+            if (!navigator.bluetooth) {
+                alert("Web Bluetooth is not supported on this browser. Please open in Google Chrome on Android.");
+                return;
+            }
+
+            try {
+                statusText.innerText = "Status: Scanning for Fire-Boltt...";
+                
+                // Request Bluetooth Device
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [HR_SERVICE_UUID] }],
+                    optionalServices: [HR_SERVICE_UUID]
+                });
+
+                statusText.innerText = "Status: Connecting to " + device.name + "...";
+
+                // Connect to GATT Server
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(HR_SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(HR_CHAR_UUID);
+
+                // Subscribe to Live Notifications
+                await characteristic.startNotifications();
+                
+                statusText.innerText = "Status: Connected & Streaming Live!";
+                statusText.style.color = "#34d399"; // Tailwind emerald-400
+                connectBtn.style.display = "none";
+                watchConnected = true; // STOPS THE FAKE MATH.RANDOM DATA
+
+                // Parse Data Whenever Watch Sends a Heartbeat
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const dataView = event.target.value;
+                    const flags = dataView.getUint8(0);
+                    
+                    let bpm = 0;
+                    if ((flags & 0x01) === 0) {
+                        bpm = dataView.getUint8(1);
+                    } else {
+                        bpm = dataView.getUint16(1, true);
+                    }
+
+                    // 1. Update UI on phone immediately
+                    bpmDisplay.innerText = bpm;
+
+                    // 2. Relay live reading to Render in background
+                    if (currentPatientId) {
+                        fetch(RENDER_ENDPOINT, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                patient_id: currentPatientId,
+                                heart_rate: bpm,
+                                status: bpm >= 120 ? "elevated" : "nominal",
+                                timestamp: new Date().toLocaleTimeString()
+                            })
+                        }).catch(err => console.log("Render dispatch skipped/error:", err));
+                    }
+                });
+
+                // Handle accidental disconnects (walking away from phone)
+                device.addEventListener('gattserverdisconnected', () => {
+                    statusText.innerText = "Status: Watch Disconnected";
+                    statusText.style.color = "#f87171"; // Tailwind red-400
+                    connectBtn.style.display = "block";
+                    watchConnected = false;
+                });
+
+            } catch (error) {
+                console.error("Bluetooth connection error:", error);
+                statusText.innerText = "Status: Connection Failed or Cancelled";
+                statusText.style.color = "#f87171";
+            }
         }
     </script>
 </body>
