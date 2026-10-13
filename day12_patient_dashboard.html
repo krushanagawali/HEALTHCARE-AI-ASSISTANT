@@ -29,6 +29,21 @@
             to { transform: translateX(500%); }
         }
     </style>
+
+
+    <!-- Link to the Web Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Register the Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker Registered!', reg))
+            .catch(err => console.error('Service Worker Registration Failed!', err));
+        });
+      }
+    </script>
 </head>
 <body class="min-h-screen flex flex-col items-center overflow-x-hidden">
 
