@@ -1,0 +1,16 @@
+{
+  "name": "STEMI AI Assistant",
+  "short_name": "STEMI AI",
+  "start_url": "/HEALTHCARE-AI-ASSISTANT/index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#e11d48",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Health_sign_logo.svg/512px-Health_sign_logo.svg.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
