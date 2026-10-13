@@ -644,6 +644,27 @@
                 startGPS();
             });
 
+
+            // NEW: Catch live Bluetooth telemetry from the patient's watch
+            socket.on('live_vitals', (data) => {
+                const toggle = document.getElementById('health-toggle');
+                
+                // Only update the UI if the family member has toggled the view ON
+                if (toggle && toggle.checked) {
+                    document.getElementById('ppg-bpm').innerText = data.heart_rate;
+                    
+                    // Automatically adjust UI colors based on heart rate thresholds
+                    const statusEl = document.getElementById('ecg-status');
+                    if (data.heart_rate >= 120) {
+                        statusEl.innerText = "Elevated Heart Rate";
+                        statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
+                    } else {
+                        statusEl.innerText = "Normal Sinus";
+                        statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                    }
+                }
+            });
+
             // Hospital Dispatch
             socket.on('ambulance_dispatched', () => {
                 const statusLi = document.getElementById('ambulance-status');
@@ -668,7 +689,7 @@
         // LIVE HEALTH DATA TOGGLE (Simulation)
         // ==========================================
         
-        function toggleHealthData() {
+       /* function toggleHealthData() {
             const toggle = document.getElementById('health-toggle');
             const dataContainer = document.getElementById('live-health-data');
             
@@ -687,6 +708,33 @@
                 // Start Simulating metrics based on connected patient
                 liveHealthInterval = setInterval(() => {
                     document.getElementById('ppg-bpm').innerText = Math.floor(Math.random() * (75 - 70 + 1) + 70);
+                    document.getElementById('ecg-mv').innerText = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
+                }, 2000);
+            } else {
+                dataContainer.classList.add('hidden');
+                clearInterval(liveHealthInterval);
+                document.getElementById('ppg-bpm').innerText = "--";
+                document.getElementById('ecg-mv').innerText = "--";
+            }
+        }  */
+
+        function toggleHealthData() {
+            const toggle = document.getElementById('health-toggle');
+            const dataContainer = document.getElementById('live-health-data');
+            
+            if (!connectedPatientId) {
+                alert("You must scan and connect to a patient first to view live data.");
+                toggle.checked = false;
+                return;
+            }
+
+            if (toggle.checked) {
+                dataContainer.classList.remove('hidden');
+                document.getElementById('ecg-status').innerText = "Waiting for watch data...";
+                document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                
+                // Keep the visual ECG wave aesthetic, but STOP generating fake BPMs
+                liveHealthInterval = setInterval(() => {
                     document.getElementById('ecg-mv').innerText = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
                 }, 2000);
             } else {
