@@ -381,7 +381,7 @@
                     });
                     setupSocketListeners();
                 }
-                startSensorSimulation();
+              //  startSensorSimulation();
             }
         })();
 
@@ -462,7 +462,7 @@
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
             
-            startSensorSimulation();
+           // startSensorSimulation();
         }
 
         function openProfile() {
@@ -535,7 +535,7 @@
         }
 
         function startSensorSimulation() {
-            setInterval(() => {
+           /* setInterval(() => {
                 // Only generate fake numbers if real watch is disconnected
                 if (!watchConnected) {
                     const bpm = Math.floor(Math.random() * (75 - 70 + 1) + 70);
@@ -543,7 +543,13 @@
                 }
                 const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
                 document.getElementById('ecg-mv').innerText = mv;
-            }, 2000);
+            }, 2000); */
+            setInterval(() => {
+        // Only update ECG mV value for the waveform visual
+        const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
+        const ecgMvEl = document.getElementById('ecg-mv');
+        if (ecgMvEl) ecgMvEl.innerText = mv;
+    }, 2000);
         }
 
         function openAIChat() {
