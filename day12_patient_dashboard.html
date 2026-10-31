@@ -583,7 +583,7 @@
             container.appendChild(card);
         }
 
-        function startSensorSimulation() {
+        // function startSensorSimulation() {
            /* setInterval(() => {
                 // Only generate fake numbers if real watch is disconnected
                 if (!watchConnected) {
@@ -593,13 +593,13 @@
                 const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
                 document.getElementById('ecg-mv').innerText = mv;
             }, 2000); */
-            setInterval(() => {
-        // Only update ECG mV value for the waveform visual
-        const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
-        const ecgMvEl = document.getElementById('ecg-mv');
-        if (ecgMvEl) ecgMvEl.innerText = mv;
-    }, 2000);
-        }
+    //         setInterval(() => {
+    //     // Only update ECG mV value for the waveform visual
+    //     const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
+    //     const ecgMvEl = document.getElementById('ecg-mv');
+    //     if (ecgMvEl) ecgMvEl.innerText = mv;
+    // }, 2000);
+    //     }
 
         function openAIChat() {
             document.getElementById('ai-modal').classList.remove('hidden');
