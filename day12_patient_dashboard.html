@@ -29,18 +29,17 @@
             to { transform: translateX(500%); }
         }
 
-        /* Add this inside your existing <style> tag */
-.ecg-paper {
-    background-color: #ffffff;
-    background-image: 
-        linear-gradient(to right, rgba(255, 192, 203, 0.6) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 192, 203, 0.6) 1px, transparent 1px),
-        linear-gradient(to right, rgba(255, 99, 132, 0.6) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 99, 132, 0.6) 1px, transparent 1px);
-    background-size: 5px 5px, 5px 5px, 25px 25px, 25px 25px;
-}
+        /* Pink Medical Grid for ECG Canvas */
+        .ecg-paper {
+            background-color: #ffffff;
+            background-image: 
+                linear-gradient(to right, rgba(255, 192, 203, 0.6) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 192, 203, 0.6) 1px, transparent 1px),
+                linear-gradient(to right, rgba(255, 99, 132, 0.6) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 99, 132, 0.6) 1px, transparent 1px);
+            background-size: 5px 5px, 5px 5px, 25px 25px, 25px 25px;
+        }
     </style>
-
 
     <!-- Link to the Web Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -167,47 +166,29 @@
                 <p id="connectionStatus" class="text-xs text-slate-500 text-center mt-3 font-medium">Status: Disconnected</p>
             </div>
 
-            <!-- ECG Sensor Reading -->
-            <!-- <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
-                    <span id="ecg-status" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors">Normal Sinus</span>
-                </div> -->
-                <!-- Simulated ECG Wave -->
-                <!-- <div class="h-16 w-full overflow-hidden relative flex items-center border-b border-slate-800 pb-2">
-                    <svg class="w-full h-full text-emerald-500 transition-colors" preserveAspectRatio="none" viewBox="0 0 200 40" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path id="ecg-line" d="M0 20 L20 20 L25 10 L30 30 L35 20 L80 20 L85 15 L90 25 L95 20 L200 20" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent w-10 animate-[scan_2s_linear_infinite]"></div>
-                </div>
-                <div class="mt-3 flex justify-between items-center">
-                    <p class="text-xs text-slate-500">Live Stream Data</p>
-                    <p class="text-white font-mono text-sm"><span id="ecg-mv">0.85</span> mV</p>
-                </div>
-            </div> -->
 
             <!-- ECG Sensor Reading -->
-<div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
-        <span id="ecg-status" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors">Awaiting Data</span>
-    </div>
-    
-    <!-- REAL ECG CANVAS -->
-    <div class="h-32 w-full ecg-paper rounded overflow-hidden relative border border-slate-700">
-        <canvas id="ecgCanvas" class="w-full h-full absolute inset-0"></canvas>
-    </div>
-    
-    <div class="mt-3 flex justify-between items-center">
-        <p class="text-xs text-slate-500">Live Hardware Stream</p>
-        <p class="text-white font-mono text-sm"><span id="ecg-mv">0.00</span> mV</p>
-    </div>
-    
-    <!-- WEB SERIAL CONNECT BUTTON -->
-    <button id="connectEcgBtn" onclick="connectESP32()" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-emerald-500 mt-4">
-        🔌 Connect ESP32-C3 (ECG)
-    </button>
-</div>
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
+                    <span id="ecg-status" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors">Awaiting Data</span>
+                </div>
+                
+                <!-- REAL ECG CANVAS -->
+                <div class="h-32 w-full ecg-paper rounded overflow-hidden relative border border-slate-700">
+                    <canvas id="ecgCanvas" class="w-full h-full absolute inset-0"></canvas>
+                </div>
+                
+                <div class="mt-3 flex justify-between items-center">
+                    <p class="text-xs text-slate-500">Live Hardware Stream</p>
+                    <p class="text-white font-mono text-sm"><span id="ecg-mv">0.00</span> mV</p>
+                </div>
+                
+                <!-- WEB SERIAL CONNECT BUTTON -->
+                <button id="connectEcgBtn" onclick="connectESP32()" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-emerald-500 mt-4">
+                    🔌 Connect ESP32-C3 (ECG)
+                </button>
+            </div>
 
             <!-- Alerts Section -->
             <div class="pt-4">
@@ -430,7 +411,6 @@
                     });
                     setupSocketListeners();
                 }
-              //  startSensorSimulation();
             }
         })();
 
@@ -510,8 +490,6 @@
             // Switch Views
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
-            
-           // startSensorSimulation();
         }
 
         function openProfile() {
@@ -582,24 +560,6 @@
             `;
             container.appendChild(card);
         }
-
-        // function startSensorSimulation() {
-           /* setInterval(() => {
-                // Only generate fake numbers if real watch is disconnected
-                if (!watchConnected) {
-                    const bpm = Math.floor(Math.random() * (75 - 70 + 1) + 70);
-                    document.getElementById('ppg-bpm').innerText = bpm;
-                }
-                const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
-                document.getElementById('ecg-mv').innerText = mv;
-            }, 2000); */
-    //         setInterval(() => {
-    //     // Only update ECG mV value for the waveform visual
-    //     const mv = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
-    //     const ecgMvEl = document.getElementById('ecg-mv');
-    //     if (ecgMvEl) ecgMvEl.innerText = mv;
-    // }, 2000);
-    //     }
 
         function openAIChat() {
             document.getElementById('ai-modal').classList.remove('hidden');
@@ -743,15 +703,14 @@
             try {
                 statusText.innerText = "Status: Scanning for Fire-Boltt...";
                 
-                
                 // WITH THIS UPDATED FILTER:
-// REPLACE THE PREVIOUS requestDevice BLOCK WITH THIS:
-const device = await navigator.bluetooth.requestDevice({
-    filters: [
-        { namePrefix: 'FB' } // Forces Chrome to bypass filters for devices starting with "FB"
-    ],
-    optionalServices: [HR_SERVICE_UUID, 'heart_rate', 0x180D]
-});
+                // REPLACE THE PREVIOUS requestDevice BLOCK WITH THIS:
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { namePrefix: 'FB' } // Forces Chrome to bypass filters for devices starting with "FB"
+                    ],
+                    optionalServices: [HR_SERVICE_UUID, 'heart_rate', 0x180D]
+                });
 
                 statusText.innerText = "Status: Connecting to " + device.name + "...";
 
@@ -815,99 +774,99 @@ const device = await navigator.bluetooth.requestDevice({
 
 
         // ==========================================
-// WEB SERIAL API (ESP32-C3 ECG CONNECTION)
-// ==========================================
-let ecgPort;
-let ecgCanvas = document.getElementById('ecgCanvas');
-let ecgCtx = ecgCanvas.getContext('2d');
-let ecgX = 0;
-let lastEcgY = 0;
-let canvasInitialized = false;
+        // WEB SERIAL API (ESP32-C3 ECG CONNECTION)
+        // ==========================================
+        let ecgPort;
+        let ecgCanvas = document.getElementById('ecgCanvas');
+        let ecgCtx = ecgCanvas.getContext('2d');
+        let ecgX = 0;
+        let lastEcgY = 0;
+        let canvasInitialized = false;
 
-async function connectESP32() {
-    if (!navigator.serial) {
-        alert("Web Serial API not supported in this browser. Please use Google Chrome or Edge on Desktop.");
-        return;
-    }
+        async function connectESP32() {
+            if (!navigator.serial) {
+                alert("Web Serial API not supported in this browser. Please use Google Chrome or Edge on Desktop.");
+                return;
+            }
 
-    try {
-        // Request port and open at your firmware's baud rate
-        ecgPort = await navigator.serial.requestPort();
-        await ecgPort.open({ baudRate: 115200 });
-        
-        // Update UI
-        document.getElementById('connectEcgBtn').innerText = "✅ ECG Live Stream Connected";
-        document.getElementById('connectEcgBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
-        document.getElementById('ecg-status').innerText = "Monitoring";
+            try {
+                // Request port and open at your firmware's baud rate
+                ecgPort = await navigator.serial.requestPort();
+                await ecgPort.open({ baudRate: 115200 });
+                
+                // Update UI
+                document.getElementById('connectEcgBtn').innerText = "✅ ECG Live Stream Connected";
+                document.getElementById('connectEcgBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
+                document.getElementById('ecg-status').innerText = "Monitoring";
 
-        // Setup stream reading
-        const textDecoder = new TextDecoderStream();
-        const readableStreamClosed = ecgPort.readable.pipeTo(textDecoder.writable);
-        const reader = textDecoder.readable.getReader();
-        let buffer = "";
+                // Setup stream reading
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = ecgPort.readable.pipeTo(textDecoder.writable);
+                const reader = textDecoder.readable.getReader();
+                let buffer = "";
 
-        // Setup Canvas dimensions
-        ecgCanvas.width = ecgCanvas.offsetWidth;
-        ecgCanvas.height = ecgCanvas.offsetHeight;
-        lastEcgY = ecgCanvas.height / 2;
-        canvasInitialized = true;
-        
-        ecgCtx.lineWidth = 1.5;
-        ecgCtx.lineJoin = "round";
-        ecgCtx.strokeStyle = "#000000"; // Doctor-style black ink
+                // Setup Canvas dimensions
+                ecgCanvas.width = ecgCanvas.offsetWidth;
+                ecgCanvas.height = ecgCanvas.offsetHeight;
+                lastEcgY = ecgCanvas.height / 2;
+                canvasInitialized = true;
+                
+                ecgCtx.lineWidth = 1.5;
+                ecgCtx.lineJoin = "round";
+                ecgCtx.strokeStyle = "#000000"; // Doctor-style black ink
 
-        // Infinite loop to process incoming serial data
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            
-            buffer += value;
-            let lines = buffer.split("\n");
-            buffer = lines.pop(); // Keep incomplete fragments in the buffer
+                // Infinite loop to process incoming serial data
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += value;
+                    let lines = buffer.split("\n");
+                    buffer = lines.pop(); // Keep incomplete fragments in the buffer
 
-            for (let line of lines) {
-                let ecgValue = parseInt(line.trim());
-                if (!isNaN(ecgValue)) {
-                    drawECGWave(ecgValue);
-                    // Optionally update the mV text
-                    document.getElementById('ecg-mv').innerText = (ecgValue / 1000).toFixed(2);
+                    for (let line of lines) {
+                        let ecgValue = parseInt(line.trim());
+                        if (!isNaN(ecgValue)) {
+                            drawECGWave(ecgValue);
+                            // Optionally update the mV text
+                            document.getElementById('ecg-mv').innerText = (ecgValue / 1000).toFixed(2);
+                        }
+                    }
                 }
+            } catch (err) {
+                console.error("Web Serial Error:", err);
+                alert("Failed to connect to ESP32-C3. Ensure it is plugged in and not open in the Arduino IDE.");
             }
         }
-    } catch (err) {
-        console.error("Web Serial Error:", err);
-        alert("Failed to connect to ESP32-C3. Ensure it is plugged in and not open in the Arduino IDE.");
-    }
-}
 
-function drawECGWave(value) {
-    if (!canvasInitialized) return;
+        function drawECGWave(value) {
+            if (!canvasInitialized) return;
 
-    // Scale the raw value to fit the canvas height. 
-    // Increase the divisor (e.g., 2500) if spikes are cut off, decrease it to zoom in.
-    let scale = ecgCanvas.height / 2500; 
-    
-    // Invert Y axis for canvas (0 is at top)
-    let newY = (ecgCanvas.height / 2) - (value * scale);
+            // Scale the raw value to fit the canvas height. 
+            // Increase the divisor (e.g., 2500) if spikes are cut off, decrease it to zoom in.
+            let scale = ecgCanvas.height / 2500; 
+            
+            // Invert Y axis for canvas (0 is at top)
+            let newY = (ecgCanvas.height / 2) - (value * scale);
 
-    // Draw the line segment
-    ecgCtx.beginPath();
-    ecgCtx.moveTo(ecgX, lastEcgY);
-    ecgCtx.lineTo(ecgX + 2, newY);
-    ecgCtx.stroke();
+            // Draw the line segment
+            ecgCtx.beginPath();
+            ecgCtx.moveTo(ecgX, lastEcgY);
+            ecgCtx.lineTo(ecgX + 2, newY);
+            ecgCtx.stroke();
 
-    lastEcgY = newY;
-    ecgX += 2;
+            lastEcgY = newY;
+            ecgX += 2;
 
-    // Classic Hospital Sweep Effect: clear a small gap ahead of the pen
-    ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
+            // Classic Hospital Sweep Effect: clear a small gap ahead of the pen
+            ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
 
-    // Wrap around to the left edge
-    if (ecgX >= ecgCanvas.width) {
-        ecgX = 0;
-        ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); // clear initial gap
-    }
-}
+            // Wrap around to the left edge
+            if (ecgX >= ecgCanvas.width) {
+                ecgX = 0;
+                ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); // clear initial gap
+            }
+        }
     </script>
 </body>
 </html>
