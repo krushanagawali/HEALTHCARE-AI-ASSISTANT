@@ -784,60 +784,63 @@
         let canvasInitialized = false;
 
         async function connectESP32() {
-            if (!navigator.serial) {
-                alert("Web Serial API not supported in this browser. Please use Google Chrome or Edge on Desktop.");
-                return;
-            }
+    if (!navigator.serial) {
+        alert("Web Serial API not supported in this browser. Please use Google Chrome or Edge on Desktop.");
+        return;
+    }
 
-            try {
-                // Request port and open at your firmware's baud rate
-                ecgPort = await navigator.serial.requestPort();
-                await ecgPort.open({ baudRate: 115200 });
+    try {
+        ecgPort = await navigator.serial.requestPort();
+        await ecgPort.open({ baudRate: 115200 });
+        
+        // CRITICAL FIX: Force Chrome to tell the ESP32-C3 that a terminal is listening
+        await ecgPort.setSignals({ dataTerminalReady: true, requestToSend: true });
+        
+        document.getElementById('connectEcgBtn').innerText = "✅ ECG Live Stream Connected";
+        document.getElementById('connectEcgBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
+        document.getElementById('ecg-status').innerText = "Monitoring";
+
+        const textDecoder = new TextDecoderStream();
+        const readableStreamClosed = ecgPort.readable.pipeTo(textDecoder.writable);
+        const reader = textDecoder.readable.getReader();
+        let buffer = "";
+
+        ecgCanvas.width = ecgCanvas.offsetWidth;
+        ecgCanvas.height = ecgCanvas.offsetHeight;
+        lastEcgY = ecgCanvas.height / 2;
+        canvasInitialized = true;
+        
+        ecgCtx.lineWidth = 1.5;
+        ecgCtx.lineJoin = "round";
+        ecgCtx.strokeStyle = "#000000"; 
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            
+            buffer += value;
+            let lines = buffer.split("\n");
+            buffer = lines.pop(); 
+
+            for (let line of lines) {
+                line = line.trim();
+                if (line === "") continue;
                 
-                // Update UI
-                document.getElementById('connectEcgBtn').innerText = "✅ ECG Live Stream Connected";
-                document.getElementById('connectEcgBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
-                document.getElementById('ecg-status').innerText = "Monitoring";
-
-                // Setup stream reading
-                const textDecoder = new TextDecoderStream();
-                const readableStreamClosed = ecgPort.readable.pipeTo(textDecoder.writable);
-                const reader = textDecoder.readable.getReader();
-                let buffer = "";
-
-                // Setup Canvas dimensions
-                ecgCanvas.width = ecgCanvas.offsetWidth;
-                ecgCanvas.height = ecgCanvas.offsetHeight;
-                lastEcgY = ecgCanvas.height / 2;
-                canvasInitialized = true;
+                // Extracts the last number in case grid data is mixed in
+                let parts = line.split("\t");
+                let ecgValue = parseInt(parts[parts.length - 1]);
                 
-                ecgCtx.lineWidth = 1.5;
-                ecgCtx.lineJoin = "round";
-                ecgCtx.strokeStyle = "#000000"; // Doctor-style black ink
-
-                // Infinite loop to process incoming serial data
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    
-                    buffer += value;
-                    let lines = buffer.split("\n");
-                    buffer = lines.pop(); // Keep incomplete fragments in the buffer
-
-                    for (let line of lines) {
-                        let ecgValue = parseInt(line.trim());
-                        if (!isNaN(ecgValue)) {
-                            drawECGWave(ecgValue);
-                            // Optionally update the mV text
-                            document.getElementById('ecg-mv').innerText = (ecgValue / 1000).toFixed(2);
-                        }
-                    }
+                if (!isNaN(ecgValue)) {
+                    drawECGWave(ecgValue);
+                    document.getElementById('ecg-mv').innerText = (ecgValue / 1000).toFixed(2);
                 }
-            } catch (err) {
-                console.error("Web Serial Error:", err);
-                alert("Failed to connect to ESP32-C3. Ensure it is plugged in and not open in the Arduino IDE.");
             }
         }
+    } catch (err) {
+        console.error("Web Serial Error:", err);
+        alert("Failed to connect to ESP32-C3. Ensure the Arduino IDE is completely closed.");
+    }
+}
 
         function drawECGWave(value) {
             if (!canvasInitialized) return;
