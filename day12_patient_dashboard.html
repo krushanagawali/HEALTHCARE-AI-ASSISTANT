@@ -842,34 +842,39 @@
     }
 }
 
-        function drawECGWave(value) {
-            if (!canvasInitialized) return;
+       let jsBaseline = 0; // Add this new variable above the function
 
-            // Scale the raw value to fit the canvas height. 
-            // Increase the divisor (e.g., 2500) if spikes are cut off, decrease it to zoom in.
-            let scale = ecgCanvas.height / 2500; 
-            
-            // Invert Y axis for canvas (0 is at top)
-            let newY = (ecgCanvas.height / 2) - (value * scale);
+function drawECGWave(value) {
+    if (!canvasInitialized) return;
 
-            // Draw the line segment
-            ecgCtx.beginPath();
-            ecgCtx.moveTo(ecgX, lastEcgY);
-            ecgCtx.lineTo(ecgX + 2, newY);
-            ecgCtx.stroke();
+    // 1. Dynamic Auto-Centering (DC Blocker) to eliminate baseline wander
+    if (jsBaseline === 0) jsBaseline = value;
+    jsBaseline += (value - jsBaseline) * 0.05; // 5% drift correction
+    let centeredValue = value - jsBaseline;
 
-            lastEcgY = newY;
-            ecgX += 2;
+    // 2. Scale and Polarity Flip (Notice the '+' instead of '-')
+    // Increase 1500 to 2000 if spikes are too tall and get cut off
+    let scale = ecgCanvas.height / 1500; 
+    let newY = (ecgCanvas.height / 2) + (centeredValue * scale);
 
-            // Classic Hospital Sweep Effect: clear a small gap ahead of the pen
-            ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
+    // 3. Draw the crisp line segment
+    ecgCtx.beginPath();
+    ecgCtx.moveTo(ecgX, lastEcgY);
+    ecgCtx.lineTo(ecgX + 2, newY);
+    ecgCtx.stroke();
 
-            // Wrap around to the left edge
-            if (ecgX >= ecgCanvas.width) {
-                ecgX = 0;
-                ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); // clear initial gap
-            }
-        }
+    lastEcgY = newY;
+    ecgX += 2;
+
+    // 4. Classic Hospital Sweep Effect
+    ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
+
+    // 5. Wrap around to the left edge
+    if (ecgX >= ecgCanvas.width) {
+        ecgX = 0;
+        ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); 
+    }
+}
     </script>
 </body>
 </html>
