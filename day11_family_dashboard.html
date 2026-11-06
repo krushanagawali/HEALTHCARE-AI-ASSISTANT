@@ -659,22 +659,47 @@
             });
 
 
-            // NEW: Catch live Bluetooth telemetry from the patient's watch
+            // // NEW: Catch live Bluetooth telemetry from the patient's watch
+            // socket.on('live_vitals', (data) => {
+            //     const toggle = document.getElementById('health-toggle');
+                
+            //     // Only update the UI if the family member has toggled the view ON
+            //     if (toggle && toggle.checked) {
+            //         document.getElementById('ppg-bpm').innerText = data.heart_rate;
+                    
+            //         // Automatically adjust UI colors based on heart rate thresholds
+            //         const statusEl = document.getElementById('ecg-status');
+            //         if (data.heart_rate >= 120) {
+            //             statusEl.innerText = "Elevated Heart Rate";
+            //             statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
+            //         } else {
+            //             statusEl.innerText = "Normal Sinus";
+            //             statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+            //         }
+            //     }
+            // });
+
+            // Catch live telemetry from the patient
             socket.on('live_vitals', (data) => {
                 const toggle = document.getElementById('health-toggle');
                 
                 // Only update the UI if the family member has toggled the view ON
                 if (toggle && toggle.checked) {
+                    // Update BPM
                     document.getElementById('ppg-bpm').innerText = data.heart_rate;
+                    
+                    // Update ECG value if it exists in the payload
+                    if (data.ecg_value !== undefined) {
+                        document.getElementById('ecg-mv').innerText = data.ecg_value;
+                        document.getElementById('ecg-status').innerText = "Streaming Live";
+                        document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                    }
                     
                     // Automatically adjust UI colors based on heart rate thresholds
                     const statusEl = document.getElementById('ecg-status');
                     if (data.heart_rate >= 120) {
                         statusEl.innerText = "Elevated Heart Rate";
                         statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
-                    } else {
-                        statusEl.innerText = "Normal Sinus";
-                        statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                     }
                 }
             });
@@ -747,10 +772,10 @@
                 document.getElementById('ecg-status').innerText = "Waiting for watch data...";
                 document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                 
-                // Keep the visual ECG wave aesthetic, but STOP generating fake BPMs
-                liveHealthInterval = setInterval(() => {
-                    document.getElementById('ecg-mv').innerText = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
-                }, 2000);
+                // // Keep the visual ECG wave aesthetic, but STOP generating fake BPMs
+                // liveHealthInterval = setInterval(() => {
+                //     document.getElementById('ecg-mv').innerText = (Math.random() * (0.89 - 0.80) + 0.80).toFixed(2);
+                // }, 2000);
             } else {
                 dataContainer.classList.add('hidden');
                 clearInterval(liveHealthInterval);
