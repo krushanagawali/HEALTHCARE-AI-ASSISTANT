@@ -111,13 +111,43 @@ def on_join(data):
 # ==========================================
 # 3. LIVE WEARABLE VITALS TELEMETRY (NEW)
 # ==========================================
+# @app.route('/update_vitals', methods=['POST'])
+# def update_vitals():
+#     """Receives live heart rate from ble_reader.py and broadcasts it immediately."""
+#     incoming = request.get_json(force=True, silent=True) or {}
+    
+#     patient_id = incoming.get('patient_id', 'PATIENT_DEFAULT')
+#     heart_rate = incoming.get('heart_rate')
+    
+#     if heart_rate is None:
+#         return jsonify({"error": "Missing heart_rate"}), 400
+
+#     payload = {
+#         "patient_id": patient_id,
+#         "heart_rate": int(heart_rate),
+#         "status": incoming.get('status', 'nominal'),
+#         "timestamp": incoming.get('timestamp')
+#     }
+
+#     # Store in memory for instant polling
+#     latest_vitals_cache[patient_id] = payload
+
+#     # Broadcast to patient room and doctor channel via WebSockets
+#     socketio.emit('live_vitals', payload, to=f'room_{patient_id}')
+#     socketio.emit('live_vitals', payload, to='room_doctors')
+
+#     return jsonify({"status": "success", "received": payload}), 200
+
 @app.route('/update_vitals', methods=['POST'])
 def update_vitals():
-    """Receives live heart rate from ble_reader.py and broadcasts it immediately."""
+    """Receives live vitals from ble_reader.py or ESP32 and broadcasts immediately."""
     incoming = request.get_json(force=True, silent=True) or {}
     
     patient_id = incoming.get('patient_id', 'PATIENT_DEFAULT')
     heart_rate = incoming.get('heart_rate')
+    
+    # NEW: Extract the ecg_value from the incoming POST request
+    ecg_value = incoming.get('ecg_value') 
     
     if heart_rate is None:
         return jsonify({"error": "Missing heart_rate"}), 400
@@ -125,6 +155,7 @@ def update_vitals():
     payload = {
         "patient_id": patient_id,
         "heart_rate": int(heart_rate),
+        "ecg_value": ecg_value,  # NEW: Add it to the broadcast payload
         "status": incoming.get('status', 'nominal'),
         "timestamp": incoming.get('timestamp')
     }
