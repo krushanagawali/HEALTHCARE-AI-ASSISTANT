@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import requests
+import random
 from bleak import BleakClient
 
 # Device Configuration from nRF Connect
@@ -29,13 +30,18 @@ def notification_handler(sender, data: bytearray):
     now_str = datetime.datetime.now().strftime("%H:%M:%S")
     print(f"[{now_str}] 💓 Live Heart Rate from Fire-Boltt: {bpm} BPM")
 
+    # Generate a realistic simulated ECG millivolt reading just for testing the UI
+    simulated_ecg_mv = round(random.uniform(0.80, 0.95), 2)
+
     # Relay reading to Render backend
     payload = {
         "patient_id": PATIENT_ID,
         "heart_rate": bpm,
+        "ecg_value": simulated_ecg_mv,  # <-- ADD THIS LINE
         "status": "nominal" if bpm < 120 else "elevated",
         "timestamp": now_str,
     }
+    
     try:
         response = requests.post(SERVER_URL, json=payload, timeout=2)
         if response.status_code == 200:
