@@ -166,11 +166,15 @@
                             <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
                             <span id="ecg-status" class="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded font-bold transition-colors">Pending Link...</span>
                         </div>
-                        <div class="h-12 w-full overflow-hidden relative flex items-center border-b border-slate-700 pb-2">
+                        <!-- <div class="h-12 w-full overflow-hidden relative flex items-center border-b border-slate-700 pb-2">
                             <svg class="w-full h-full text-indigo-500 transition-colors" preserveAspectRatio="none" viewBox="0 0 200 40" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path id="ecg-line" d="M0 20 L20 20 L25 10 L30 30 L35 20 L80 20 L85 15 L90 25 L95 20 L200 20" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent w-10 animate-[scan_2s_linear_infinite]"></div>
+                        </div> -->
+                        <div class="h-16 w-full overflow-hidden relative border-b border-slate-700 pb-2">
+                            <!-- REAL ECG CANVAS -->
+                            <canvas id="familyEcgCanvas" class="w-full h-full absolute inset-0"></canvas>
                         </div>
                         <div class="mt-2 flex justify-between items-center">
                             <p class="text-[10px] text-slate-500">Live Stream Data</p>
@@ -409,6 +413,30 @@
 
         const apiKey = ""; 
 
+
+
+        // ==========================================
+        // ECG CANVAS VARIABLES
+        // ==========================================
+        let ecgCanvas, ecgCtx;
+        let ecgX = 0;
+        let lastEcgY = 0;
+        let jsBaseline = 0;
+        let canvasInitialized = false;
+        
+        function initCanvas() {
+            ecgCanvas = document.getElementById('familyEcgCanvas');
+            if(ecgCanvas) {
+                ecgCtx = ecgCanvas.getContext('2d');
+                ecgCanvas.width = ecgCanvas.offsetWidth;
+                ecgCanvas.height = ecgCanvas.offsetHeight;
+                lastEcgY = ecgCanvas.height / 2;
+                ecgCtx.lineWidth = 2.0;
+                ecgCtx.lineJoin = "round";
+                ecgCtx.strokeStyle = "#6366f1"; // Tailwind indigo-500 to match your Family UI theme
+                canvasInitialized = true;
+            }
+        }
      // ==========================================
         // 1. PERSISTENCE ENGINE (FAMILY)
         // ==========================================
@@ -688,11 +716,21 @@
                     // Update BPM
                     document.getElementById('ppg-bpm').innerText = data.heart_rate;
                     
+                    // // Update ECG value if it exists in the payload
+                    // if (data.ecg_value !== undefined) {
+                    //     document.getElementById('ecg-mv').innerText = data.ecg_value;
+                    //     document.getElementById('ecg-status').innerText = "Streaming Live";
+                    //     document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                    // }
+
                     // Update ECG value if it exists in the payload
                     if (data.ecg_value !== undefined) {
                         document.getElementById('ecg-mv').innerText = data.ecg_value;
                         document.getElementById('ecg-status').innerText = "Streaming Live";
                         document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                        
+                        // NEW: Actually draw the wave on the canvas!
+                        drawECGWave(parseFloat(data.ecg_value));
                     }
                     
                     // Automatically adjust UI colors based on heart rate thresholds
@@ -970,6 +1008,42 @@
             statusLi.className = "flex items-center text-yellow-400 animate-pulse";
             icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
             text.innerText = "Waiting for Hospital to dispatch Ambulance...";
+        }
+
+
+        // ==========================================
+        // DYNAMIC ECG DRAWING FUNCTION
+        // ==========================================
+        function drawECGWave(value) {
+            if (!canvasInitialized) initCanvas();
+            if (!canvasInitialized) return;
+
+            // 1. Dynamic Auto-Centering
+            if (jsBaseline === 0) jsBaseline = value;
+            jsBaseline += (value - jsBaseline) * 0.05; 
+            let centeredValue = value - jsBaseline;
+
+            // 2. Scale the wave to fit the family dashboard box
+            let scale = ecgCanvas.height / 2.0; // Adjust this number if the wave is too tall/short
+            let newY = (ecgCanvas.height / 2) - (centeredValue * scale); 
+
+            // 3. Draw the line segment
+            ecgCtx.beginPath();
+            ecgCtx.moveTo(ecgX, lastEcgY);
+            ecgCtx.lineTo(ecgX + 3, newY); // Move right by 3 pixels
+            ecgCtx.stroke();
+
+            lastEcgY = newY;
+            ecgX += 3;
+
+            // 4. Sweep Effect (clear ahead of the line)
+            ecgCtx.clearRect(ecgX, 0, 15, ecgCanvas.height);
+
+            // 5. Wrap around to the left edge when hitting the right side
+            if (ecgX >= ecgCanvas.width) {
+                ecgX = 0;
+                ecgCtx.clearRect(0, 0, 15, ecgCanvas.height); 
+            }
         }
     </script>
 </body>
