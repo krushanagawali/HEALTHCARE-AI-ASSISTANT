@@ -652,6 +652,25 @@
                 showToast("Successfully linked to patient!");
             });
 
+
+            // NEW: Catch the high-speed REAL ECG stream from the ESP32
+            socket.on('live_real_ecg', (data) => {
+                const toggle = document.getElementById('health-toggle');
+                
+                // Only draw if the family member has the toggle switched ON
+                if (toggle && toggle.checked && data.raw_ecg !== undefined) {
+                    
+                    // Update text
+                    document.getElementById('ecg-mv').innerText = data.mv_ecg;
+                    document.getElementById('ecg-status').innerText = "Streaming Live";
+                    document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                    
+                    // Draw the REAL wave on the canvas!
+                    drawECGWave(data.raw_ecg);
+                }
+            });
+
+            
             // Error: Patient hasn't activated device
             socket.on('link_error', (data) => {
                 alert(data.message || "Failed to link. Ensure the patient's device is active.");
