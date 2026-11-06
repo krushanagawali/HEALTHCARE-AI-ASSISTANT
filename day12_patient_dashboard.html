@@ -29,7 +29,7 @@
             to { transform: translateX(500%); }
         }
 
-        /* Pink Medical Grid for ECG Canvas */
+        /* Pink Medical Grid for  Canvas */
         .ecg-paper {
             background-color: #ffffff;
             background-image: 
@@ -830,9 +830,23 @@
                 let parts = line.split("\t");
                 let ecgValue = parseInt(parts[parts.length - 1]);
                 
+                // if (!isNaN(ecgValue)) {
+                //     drawECGWave(ecgValue);
+                //     document.getElementById('ecg-mv').innerText = (ecgValue / 1000).toFixed(2);
+                // }
                 if (!isNaN(ecgValue)) {
                     drawECGWave(ecgValue);
-                    document.getElementById('ecg-mv').innerText = (ecgValue / 1000).toFixed(2);
+                    let mvValue = (ecgValue / 1000).toFixed(2);
+                    document.getElementById('ecg-mv').innerText = mvValue;
+
+                    // NEW: Stream the REAL ESP32 data to the Cloud!
+                    if (socket && currentPatientId) {
+                        socket.emit('stream_real_ecg', {
+                            patient_id: currentPatientId,
+                            raw_ecg: ecgValue,
+                            mv_ecg: mvValue
+                        });
+                    }
                 }
             }
         }
