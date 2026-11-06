@@ -227,6 +227,18 @@ def verify():
 
     return jsonify({"status": "not_found", "profile": None}), 404
 
+
+# ==========================================
+# 7. HIGH-SPEED REAL ECG RELAY
+# ==========================================
+@socketio.on('stream_real_ecg')
+def handle_real_ecg(data):
+    """Instantly relays the real ESP32 ECG wave from Patient to Family"""
+    patient_id = data.get('patient_id')
+    if patient_id:
+        # Broadcast exclusively to the specific patient's room
+        socketio.emit('live_real_ecg', data, to=f'room_{patient_id}')
+        
 # ==========================================
 # 6. RUNNER (RENDER-AWARE PORT)
 # ==========================================
