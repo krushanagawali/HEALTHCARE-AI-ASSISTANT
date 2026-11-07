@@ -172,7 +172,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-slate-800 p-4 rounded-xl">
+                    <!-- <div class="bg-slate-800 p-4 rounded-xl">
                         <div class="flex justify-between items-center mb-2">
                             <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
                             <span id="ecg-status" class="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded font-bold transition-colors">Pending Link...</span>
@@ -187,15 +187,32 @@
                             <!-- REAL ECG CANVAS -->
                             <!-- <canvas id="familyEcgCanvas" class="w-full h-full absolute inset-0"></canvas>
                         </div> -->
-                        <div class="h-32 w-full ecg-paper rounded overflow-hidden relative border border-slate-700">
+                        <!-- <div class="h-32 w-full ecg-paper rounded overflow-hidden relative border border-slate-700">
                             <!-- REAL ECG CANVAS -->
-                            <canvas id="familyEcgCanvas" class="w-full h-full absolute inset-0"></canvas>
+                            <!-- <canvas id="familyEcgCanvas" class="w-full h-full absolute inset-0"></canvas>
                         </div>
                         <div class="mt-2 flex justify-between items-center">
                             <p class="text-[10px] text-slate-500">Live Stream Data</p>
                             <p class="text-white font-mono text-xs"><span id="ecg-mv">--</span> mV</p>
                         </div>
-                    </div>
+                    </div> --> --> -->
+                    <!-- ECG Sensor Reading -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
+                    <span id="ecg-status" class="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded font-bold transition-colors">Pending Link...</span>
+                </div>
+                
+                <div class="h-32 w-full ecg-paper rounded overflow-hidden relative border border-slate-700">
+                    <!-- REAL ECG CANVAS -->
+                    <canvas id="familyEcgCanvas" class="w-full h-full absolute inset-0"></canvas>
+                </div>
+                
+                <div class="mt-2 flex justify-between items-center">
+                    <p class="text-[10px] text-slate-500">Live Stream Data</p>
+                    <p class="text-white font-mono text-xs"><span id="ecg-mv">--</span> mV</p>
+                </div>
+            </div>
                 </div>
             </div>
 
@@ -643,20 +660,18 @@
         // ==========================================
         // SOCKET.IO LISTENERS
         // ==========================================
-        
+
+
+
         function setupSocketListeners() {
             // Success: Server verified patient exists
             socket.on('link_success', (data) => {
                 connectedPatientId = data.patient_id || "PT-LINKED";
-                
-                // Save link to browser memory
                 localStorage.setItem('connectedPatientId', connectedPatientId);
                 
-                // Update Main Dashboard Header
                 document.getElementById('header-patient-name').innerText = `Linked to: ${data.patient_name} (${connectedPatientId})`;
                 document.getElementById('header-patient-name').classList.replace('text-slate-500', 'text-emerald-400');
                 
-                // Update Profile View with Patient Info
                 document.getElementById('no-patient-msg').classList.add('hidden');
                 document.getElementById('patient-info-container').classList.remove('hidden');
                 document.getElementById('prof-pid').innerText = connectedPatientId;
@@ -667,23 +682,19 @@
                 showToast("Successfully linked to patient!");
             });
 
-
-            // // NEW: Catch the high-speed REAL ECG stream from the ESP32
-            // socket.on('live_real_ecg', (data) => {
-            //     const toggle = document.getElementById('health-toggle');
-                
-            //     // Only draw if the family member has the toggle switched ON
-            //     if (toggle && toggle.checked && data.raw_ecg !== undefined) {
+            // Catch Bluetooth Heart Rate (BPM) from the patient
+            socket.on('live_vitals', (data) => {
+                const toggle = document.getElementById('health-toggle');
+                if (toggle && toggle.checked) {
+                    document.getElementById('ppg-bpm').innerText = data.heart_rate;
                     
-            //         // Update text
-            //         document.getElementById('ecg-mv').innerText = data.mv_ecg;
-            //         document.getElementById('ecg-status').innerText = "Streaming Live";
-            //         document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
-                    
-            //         // Draw the REAL wave on the canvas!
-            //         drawECGWave(data.raw_ecg);
-            //     }
-            // });
+                    const statusEl = document.getElementById('ecg-status');
+                    if (data.heart_rate >= 120) {
+                        statusEl.innerText = "Elevated Heart Rate";
+                        statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
+                    }
+                }
+            });
 
             // NEW: Catch the high-speed REAL ECG stream from the ESP32
             socket.on('live_real_ecg', (data) => {
@@ -691,8 +702,6 @@
                 
                 // Only draw if the family member has the toggle switched ON
                 if (toggle && toggle.checked && data.raw_ecg !== undefined) {
-                    
-                    // Update text
                     document.getElementById('ecg-mv').innerText = data.mv_ecg;
                     document.getElementById('ecg-status').innerText = "Streaming Live";
                     document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
@@ -702,7 +711,6 @@
                 }
             });
 
-            
             // Error: Patient hasn't activated device
             socket.on('link_error', (data) => {
                 alert(data.message || "Failed to link. Ensure the patient's device is active.");
@@ -713,16 +721,13 @@
                 console.log("EMERGENCY PAYLOAD:", data);
                 currentGpsLocation = data.gps_location;
                 
-                // Switch UI state
                 document.getElementById('idle-state').classList.add('hidden');
                 document.getElementById('resolved-state').classList.add('hidden');
                 document.getElementById('alert-state').classList.remove('hidden');
 
-                // Populate Emergency Data
                 document.getElementById('dash-loc').innerText = currentGpsLocation;
                 document.getElementById('dash-hospital').innerText = hospitalLocation;
                 
-                // Embed Route Map
                 const mapFrame = document.getElementById('location-map');
                 const mapContainer = document.getElementById('map-container');
                 mapFrame.src = `https://maps.google.com/maps?saddr=${encodeURIComponent(currentGpsLocation)}&daddr=${encodeURIComponent(hospitalLocation)}&t=&z=13&ie=UTF8&output=embed`;
@@ -733,64 +738,7 @@
                 let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
                 audio.play().catch(e => console.log(e));
                 
-                // Activate GPS Tracking in Profile
                 startGPS();
-            });
-
-
-            // // NEW: Catch live Bluetooth telemetry from the patient's watch
-            // socket.on('live_vitals', (data) => {
-            //     const toggle = document.getElementById('health-toggle');
-                
-            //     // Only update the UI if the family member has toggled the view ON
-            //     if (toggle && toggle.checked) {
-            //         document.getElementById('ppg-bpm').innerText = data.heart_rate;
-                    
-            //         // Automatically adjust UI colors based on heart rate thresholds
-            //         const statusEl = document.getElementById('ecg-status');
-            //         if (data.heart_rate >= 120) {
-            //             statusEl.innerText = "Elevated Heart Rate";
-            //             statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
-            //         } else {
-            //             statusEl.innerText = "Normal Sinus";
-            //             statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
-            //         }
-            //     }
-            // });
-
-            // Catch live telemetry from the patient
-            socket.on('live_vitals', (data) => {
-                const toggle = document.getElementById('health-toggle');
-                
-                // Only update the UI if the family member has toggled the view ON
-                if (toggle && toggle.checked) {
-                    // Update BPM
-                    document.getElementById('ppg-bpm').innerText = data.heart_rate;
-                    
-                    // // Update ECG value if it exists in the payload
-                    // if (data.ecg_value !== undefined) {
-                    //     document.getElementById('ecg-mv').innerText = data.ecg_value;
-                    //     document.getElementById('ecg-status').innerText = "Streaming Live";
-                    //     document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
-                    // }
-
-                    // Update ECG value if it exists in the payload
-                    if (data.ecg_value !== undefined) {
-                        document.getElementById('ecg-mv').innerText = data.ecg_value;
-                        document.getElementById('ecg-status').innerText = "Streaming Live";
-                        document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
-                        
-                        // NEW: Actually draw the wave on the canvas!
-                        drawECGWave(parseFloat(data.ecg_value));
-                    }
-                    
-                    // Automatically adjust UI colors based on heart rate thresholds
-                    const statusEl = document.getElementById('ecg-status');
-                    if (data.heart_rate >= 120) {
-                        statusEl.innerText = "Elevated Heart Rate";
-                        statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
-                    }
-                }
             });
 
             // Hospital Dispatch
@@ -804,7 +752,6 @@
                 icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
                 text.innerText = "Ambulance dispatched and en route!";
 
-                // Purge data automatically after dispatch for privacy
                 setTimeout(() => {
                     if (!document.getElementById('alert-state').classList.contains('hidden')) {
                         triggerPrivacyLock("Ambulance dispatched and en route.");
@@ -812,6 +759,176 @@
                 }, 10000); 
             });
         }
+
+        
+        // function setupSocketListeners() {
+        //     // Success: Server verified patient exists
+        //     socket.on('link_success', (data) => {
+        //         connectedPatientId = data.patient_id || "PT-LINKED";
+                
+        //         // Save link to browser memory
+        //         localStorage.setItem('connectedPatientId', connectedPatientId);
+                
+        //         // Update Main Dashboard Header
+        //         document.getElementById('header-patient-name').innerText = `Linked to: ${data.patient_name} (${connectedPatientId})`;
+        //         document.getElementById('header-patient-name').classList.replace('text-slate-500', 'text-emerald-400');
+                
+        //         // Update Profile View with Patient Info
+        //         document.getElementById('no-patient-msg').classList.add('hidden');
+        //         document.getElementById('patient-info-container').classList.remove('hidden');
+        //         document.getElementById('prof-pid').innerText = connectedPatientId;
+        //         document.getElementById('prof-pname').innerText = data.patient_name;
+        //         document.getElementById('prof-pmobile').innerText = data.patient_mobile || "Verified linked device";
+        //         document.getElementById('prof-paddress').innerText = data.patient_address || "Location shared in emergency.";
+                
+        //         showToast("Successfully linked to patient!");
+        //     });
+
+
+        //     // // NEW: Catch the high-speed REAL ECG stream from the ESP32
+        //     // socket.on('live_real_ecg', (data) => {
+        //     //     const toggle = document.getElementById('health-toggle');
+                
+        //     //     // Only draw if the family member has the toggle switched ON
+        //     //     if (toggle && toggle.checked && data.raw_ecg !== undefined) {
+                    
+        //     //         // Update text
+        //     //         document.getElementById('ecg-mv').innerText = data.mv_ecg;
+        //     //         document.getElementById('ecg-status').innerText = "Streaming Live";
+        //     //         document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                    
+        //     //         // Draw the REAL wave on the canvas!
+        //     //         drawECGWave(data.raw_ecg);
+        //     //     }
+        //     // });
+
+        //     // NEW: Catch the high-speed REAL ECG stream from the ESP32
+        //     socket.on('live_real_ecg', (data) => {
+        //         const toggle = document.getElementById('health-toggle');
+                
+        //         // Only draw if the family member has the toggle switched ON
+        //         if (toggle && toggle.checked && data.raw_ecg !== undefined) {
+                    
+        //             // Update text
+        //             document.getElementById('ecg-mv').innerText = data.mv_ecg;
+        //             document.getElementById('ecg-status').innerText = "Streaming Live";
+        //             document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                    
+        //             // Draw the REAL wave on the canvas!
+        //             drawECGWave(parseFloat(data.raw_ecg));
+        //         }
+        //     });
+
+            
+        //     // Error: Patient hasn't activated device
+        //     socket.on('link_error', (data) => {
+        //         alert(data.message || "Failed to link. Ensure the patient's device is active.");
+        //     });
+
+        //     // Emergency Triggered
+        //     socket.on('stemi_alert', (data) => {
+        //         console.log("EMERGENCY PAYLOAD:", data);
+        //         currentGpsLocation = data.gps_location;
+                
+        //         // Switch UI state
+        //         document.getElementById('idle-state').classList.add('hidden');
+        //         document.getElementById('resolved-state').classList.add('hidden');
+        //         document.getElementById('alert-state').classList.remove('hidden');
+
+        //         // Populate Emergency Data
+        //         document.getElementById('dash-loc').innerText = currentGpsLocation;
+        //         document.getElementById('dash-hospital').innerText = hospitalLocation;
+                
+        //         // Embed Route Map
+        //         const mapFrame = document.getElementById('location-map');
+        //         const mapContainer = document.getElementById('map-container');
+        //         mapFrame.src = `https://maps.google.com/maps?saddr=${encodeURIComponent(currentGpsLocation)}&daddr=${encodeURIComponent(hospitalLocation)}&t=&z=13&ie=UTF8&output=embed`;
+        //         mapContainer.classList.remove('hidden');
+
+        //         resetAmbulanceStatus();
+
+        //         let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
+        //         audio.play().catch(e => console.log(e));
+                
+        //         // Activate GPS Tracking in Profile
+        //         startGPS();
+        //     });
+
+
+        //     // // NEW: Catch live Bluetooth telemetry from the patient's watch
+        //     // socket.on('live_vitals', (data) => {
+        //     //     const toggle = document.getElementById('health-toggle');
+                
+        //     //     // Only update the UI if the family member has toggled the view ON
+        //     //     if (toggle && toggle.checked) {
+        //     //         document.getElementById('ppg-bpm').innerText = data.heart_rate;
+                    
+        //     //         // Automatically adjust UI colors based on heart rate thresholds
+        //     //         const statusEl = document.getElementById('ecg-status');
+        //     //         if (data.heart_rate >= 120) {
+        //     //             statusEl.innerText = "Elevated Heart Rate";
+        //     //             statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
+        //     //         } else {
+        //     //             statusEl.innerText = "Normal Sinus";
+        //     //             statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+        //     //         }
+        //     //     }
+        //     // });
+
+        //     // Catch live telemetry from the patient
+        //     socket.on('live_vitals', (data) => {
+        //         const toggle = document.getElementById('health-toggle');
+                
+        //         // Only update the UI if the family member has toggled the view ON
+        //         if (toggle && toggle.checked) {
+        //             // Update BPM
+        //             document.getElementById('ppg-bpm').innerText = data.heart_rate;
+                    
+        //             // // Update ECG value if it exists in the payload
+        //             // if (data.ecg_value !== undefined) {
+        //             //     document.getElementById('ecg-mv').innerText = data.ecg_value;
+        //             //     document.getElementById('ecg-status').innerText = "Streaming Live";
+        //             //     document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+        //             // }
+
+        //             // Update ECG value if it exists in the payload
+        //             if (data.ecg_value !== undefined) {
+        //                 document.getElementById('ecg-mv').innerText = data.ecg_value;
+        //                 document.getElementById('ecg-status').innerText = "Streaming Live";
+        //                 document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                        
+        //                 // NEW: Actually draw the wave on the canvas!
+        //                 drawECGWave(parseFloat(data.ecg_value));
+        //             }
+                    
+        //             // Automatically adjust UI colors based on heart rate thresholds
+        //             const statusEl = document.getElementById('ecg-status');
+        //             if (data.heart_rate >= 120) {
+        //                 statusEl.innerText = "Elevated Heart Rate";
+        //                 statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
+        //             }
+        //         }
+        //     });
+
+        //     // Hospital Dispatch
+        //     socket.on('ambulance_dispatched', () => {
+        //         const statusLi = document.getElementById('ambulance-status');
+        //         const icon = document.getElementById('ambulance-icon');
+        //         const text = document.getElementById('ambulance-text');
+
+        //         statusLi.classList.replace('text-yellow-400', 'text-emerald-400');
+        //         statusLi.classList.remove('animate-pulse');
+        //         icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
+        //         text.innerText = "Ambulance dispatched and en route!";
+
+        //         // Purge data automatically after dispatch for privacy
+        //         setTimeout(() => {
+        //             if (!document.getElementById('alert-state').classList.contains('hidden')) {
+        //                 triggerPrivacyLock("Ambulance dispatched and en route.");
+        //             }
+        //         }, 10000); 
+        //     });
+        // }
 
         // ==========================================
         // LIVE HEALTH DATA TOGGLE (Simulation)
