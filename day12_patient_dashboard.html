@@ -546,7 +546,7 @@
             const noMsg = document.getElementById('no-family-msg');
             if(noMsg) noMsg.remove();
 
-            const fId = "FM-" + (8000 + familyCounter++);
+            const fId = "FM-" + ( familyCounter++);
             const card = document.createElement('div');
             card.className = "bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 space-y-2 text-sm shadow-sm";
             card.innerHTML = `
