@@ -11,7 +11,9 @@ HR_UUID = "00002a37-0000-1000-8000-00805f9b34fb"
 
 # Render Server Endpoint
 SERVER_URL = "https://healthcare-ai-assistant-d3p8.onrender.com/update_vitals"
-PATIENT_ID = "PATIENT_DEFAULT"
+# PATIENT_ID = "PATIENT_DEFAULT"
+# Ask the user to type the ID when the script starts
+PATIENT_ID = input("Enter the Patient ID from your dashboard (e.g., PT-1234): ").strip().upper()
 
 
 def parse_heart_rate(data: bytearray) -> int:
