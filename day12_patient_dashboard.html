@@ -715,11 +715,11 @@
             }
 
             try {
-                document.getElementById('ecg-status').innerText = "Scanning for BOSS-ECG...";
+                document.getElementById('ecg-status').innerText = "Scanning for AI assistant for healthcare - ECG...";
                 
                 // 1. Scan for the ESP32
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'BOSS-ECG' }],
+                    filters: [{ name: 'AI assistant for healthcare - ECG' }],
                     optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
                 });
 
