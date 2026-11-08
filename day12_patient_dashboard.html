@@ -13,23 +13,17 @@
     
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; } 
-
         @keyframes pulse-soft-red {
             0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
             50% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
         }
         .patient-alert-pulse { animation: pulse-soft-red 2.5s infinite; }
-        
-        /* Hide scrollbar for clean chat UI */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
         @keyframes scan {
             from { transform: translateX(-100%); }
             to { transform: translateX(500%); }
         }
-
-        /* Pink Medical Grid for  Canvas */
         .ecg-paper {
             background-color: #ffffff;
             background-image: 
@@ -40,20 +34,6 @@
             background-size: 5px 5px, 5px 5px, 25px 25px, 25px 25px;
         }
     </style>
-
-    <!-- Link to the Web Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Register the Service Worker -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker Registered!', reg))
-            .catch(err => console.error('Service Worker Registration Failed!', err));
-        });
-      }
-    </script>
 </head>
 <body class="min-h-screen flex flex-col items-center overflow-x-hidden">
 
@@ -61,21 +41,16 @@
     <!-- 1. LOGIN & ACTIVATION SCREEN               -->
     <!-- ========================================== -->
     <div id="login-view" class="w-full max-w-md mt-12 p-6 flex flex-col items-center transition-all duration-300">
-        <!-- Profile Icon Symbol -->
         <div class="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6 border-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
             <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
         </div>
-        
         <h1 class="text-2xl font-bold text-white mb-8">Patient Setup</h1>
 
         <div class="w-full space-y-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-            <!-- Full Name -->
             <div>
                 <label class="block text-slate-400 text-sm font-bold mb-2">Full Name</label>
                 <input type="text" id="patient-name" placeholder="e.g. John Doe" class="w-full bg-slate-800 text-white rounded-xl p-4 border border-slate-700 focus:border-emerald-500 outline-none">
             </div>
-            
-            <!-- Mobile Number with Dropdown -->
             <div>
                 <label class="block text-slate-400 text-sm font-bold mb-2">Mobile No.</label>
                 <div class="flex">
@@ -87,13 +62,10 @@
                     <input type="tel" id="patient-mobile" placeholder="1234567890" maxlength="10" class="w-full bg-slate-800 text-white rounded-r-xl p-4 border border-slate-700 focus:border-emerald-500 outline-none tracking-widest">
                 </div>
             </div>
-
-            <!-- Home Address -->
             <div>
                 <label class="block text-slate-400 text-sm font-bold mb-2">Home Address</label>
                 <textarea id="patient-address" rows="2" placeholder="Enter your full home address" class="w-full bg-slate-800 text-white rounded-xl p-4 border border-slate-700 focus:border-emerald-500 outline-none"></textarea>
             </div>
-
             <button onclick="activatePatient()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition shadow-lg mt-4 text-lg">
                 Start Monitoring
             </button>
@@ -105,23 +77,23 @@
     <!-- ========================================== -->
     <div id="main-view" class="hidden w-full max-w-md md:max-w-2xl min-h-screen flex flex-col bg-slate-950">
         
-        <!-- Header -->
         <header class="flex justify-between items-center p-6 bg-slate-900 border-b border-slate-800 sticky top-0 z-10">
-            <!-- Top Left: 3 Line Menu -->
             <button class="text-slate-400 hover:text-white transition">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
-            
-            <!-- Top Middle: Title -->
             <h1 class="text-xl font-bold text-white tracking-wide">Patient Dashboard</h1>
             
-            <!-- Top Right: Notification & Profile -->
             <div class="flex items-center space-x-4">
+                <!-- NEW: Battery Indicator -->
+                <div id="battery-indicator" class="flex items-center space-x-1 text-emerald-400 text-xs font-bold bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17 4h-3V2h-4v2H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM9 13h6v2H9v-2z"></path></svg>
+                    <span id="patient-batt-txt">--%</span>
+                </div>
+
                 <button onclick="toggleNotifications()" class="relative text-slate-400 hover:text-white transition">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
                     <span class="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-slate-900"></span>
                 </button>
-                <!-- Profile Icon Button -->
                 <button onclick="openProfile()" class="w-9 h-9 bg-slate-800 rounded-full flex items-center justify-center border border-slate-600 hover:border-emerald-500 transition shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                     <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                 </button>
@@ -129,8 +101,6 @@
         </header>
 
         <main class="p-6 flex-1 space-y-6">
-            
-            <!-- Healthcare AI Assistant Search -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                 <h2 class="text-emerald-400 font-bold mb-3 flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -144,7 +114,7 @@
                 </div>
             </div>
 
-            <!-- PPG Sensor Reading (UPDATED FOR BLUETOOTH) -->
+            <!-- PPG Sensor Reading -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md flex flex-col">
                 <div class="flex justify-between items-center w-full mb-4">
                     <div>
@@ -159,13 +129,11 @@
                     </div>
                 </div>
                 
-                <!-- NEW: Bluetooth Connection UI -->
                 <button id="connectWatchBtn" onclick="connectFireBoltt()" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-emerald-500 mt-2">
                     🔗 Connect Fire-Boltt Watch
                 </button>
                 <p id="connectionStatus" class="text-xs text-slate-500 text-center mt-3 font-medium">Status: Disconnected</p>
             </div>
-
 
             <!-- ECG Sensor Reading -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
@@ -174,7 +142,6 @@
                     <span id="ecg-status" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors">Awaiting Data</span>
                 </div>
                 
-                <!-- REAL ECG CANVAS -->
                 <div class="h-32 w-full ecg-paper rounded overflow-hidden relative border border-slate-700">
                     <canvas id="ecgCanvas" class="w-full h-full absolute inset-0"></canvas>
                 </div>
@@ -184,9 +151,9 @@
                     <p class="text-white font-mono text-sm"><span id="ecg-mv">0.00</span> mV</p>
                 </div>
                 
-                <!-- WEB SERIAL CONNECT BUTTON -->
-                <button id="connectEcgBtn" onclick="connectESP32()" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-emerald-500 mt-4">
-                    🔌 Connect ESP32-C3 (ECG)
+                <!-- NEW: WIRELESS BLUETOOTH CONNECT BUTTON -->
+                <button id="connectEcgBtn" onclick="connectESP32BLE()" class="w-full bg-slate-800 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-blue-500 mt-4">
+                    📶 Connect Wireless ECG (Bluetooth)
                 </button>
             </div>
 
@@ -194,7 +161,6 @@
             <div class="pt-4">
                 <h2 class="text-lg font-bold text-white mb-4">System Alerts</h2>
                 
-                <!-- Emergency Alert Box (Hidden) -->
                 <div id="alert-state" class="hidden">
                     <div class="bg-red-950 border-2 border-red-500 rounded-3xl p-6 patient-alert-pulse shadow-2xl text-center">
                         <h2 class="text-3xl font-extrabold text-red-500 tracking-tight mb-2">HELP IS ON THE WAY</h2>
@@ -218,11 +184,8 @@
                     </div>
                 </div>
 
-                <!-- Safe State Placeholder -->
                 <div id="idle-state" class="bg-slate-900/50 rounded-2xl p-6 border border-slate-800 text-center">
                     <p class="text-slate-500">No active alerts. You are safe.</p>
-                    
-                    <!-- DEV SOS BUTTON -->
                     <button onclick="triggerRealLocationSOS()" class="mt-6 w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-sm rounded-lg px-4 py-2 transition shadow">
                         [Dev Tool] Simulate STEMI Attack
                     </button>
@@ -236,7 +199,6 @@
     <!-- 3. PROFILE VIEW                            -->
     <!-- ========================================== -->
     <div id="profile-view" class="hidden w-full max-w-md md:max-w-2xl min-h-screen bg-slate-950 flex flex-col">
-        <!-- Profile Header -->
         <header class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800 sticky top-0">
             <button onclick="closeProfile()" class="text-slate-400 hover:text-white flex items-center transition font-semibold">
                 <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center mr-2 border border-slate-600">
@@ -246,13 +208,11 @@
             </button>
             
             <div class="flex items-center space-x-4">
-                <!-- Location Tracker Indicator (Defaults to OFF to save battery) -->
                 <div id="gps-status-indicator" class="flex items-center space-x-1 text-slate-400 text-xs font-bold bg-slate-800 px-2 py-1 rounded transition-colors duration-300">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    <span>Location: OFF (Saving Battery)</span>
+                    <span>Location: OFF</span>
                 </div>
                 
-                <!-- Small QR Code -->
                 <button onclick="openQRFullscreen()" class="bg-white p-1 rounded hover:shadow-[0_0_10px_rgba(255,255,255,0.5)] transition" title="Tap to Enlarge">
                     <div id="qrcode-small" class="pointer-events-none w-8 h-8 flex items-center justify-center"></div>
                 </button>
@@ -260,7 +220,6 @@
         </header>
 
         <main class="p-6 flex-1 space-y-6">
-            <!-- Patient Information -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                 <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">Patient Information</h2>
                 <div class="space-y-3 text-sm">
@@ -274,25 +233,17 @@
                 </div>
             </div>
 
-            <!-- Family Information -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                 <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">Family Information</h2>
-                
                 <div id="family-info-container" class="space-y-4">
                     <p id="no-family-msg" class="text-slate-500 text-sm italic text-center py-4">No family member connected yet. Have them scan your QR code.</p>
-                    <!-- Family cards injected here -->
                 </div>
             </div>
         </main>
 
-        <!-- Footer Buttons -->
         <footer class="p-6 flex justify-between items-center border-t border-slate-800 bg-slate-900 mt-auto">
-            <button onclick="logout()" class="text-slate-400 hover:text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-slate-800 transition">
-                Log Out
-            </button>
-            <button onclick="deleteAccount()" class="text-red-500 hover:text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-red-900/30 transition">
-                Delete Account
-            </button>
+            <button onclick="logout()" class="text-slate-400 hover:text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-slate-800 transition">Log Out</button>
+            <button onclick="deleteAccount()" class="text-red-500 hover:text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-red-900/30 transition">Delete Account</button>
         </footer>
     </div>
 
@@ -311,7 +262,7 @@
         <p class="text-slate-400 text-sm mt-4 text-center">Family members can scan this code to link to your live health data.</p>
     </div>
 
-    <!-- AI Chat Modal (Live Gemini Integration) -->
+    <!-- AI Chat Modal -->
     <div id="ai-modal" class="hidden fixed inset-0 z-50 bg-slate-950 flex flex-col w-full max-w-md md:max-w-2xl mx-auto">
         <header class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800">
             <div class="flex items-center space-x-3">
@@ -326,13 +277,12 @@
         </header>
         
         <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-            <!-- AI Welcome Message -->
             <div class="flex items-start mb-4">
                 <div class="w-8 h-8 bg-emerald-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </div>
                 <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-300 text-sm max-w-[85%] border border-slate-700">
-                    Hello! I am your AI Health Assistant powered by Gemini. I can read your live smartwatch metrics. How can I help you today?
+                    Hello! I am your AI Health Assistant. How can I help you today?
                 </div>
             </div>
         </div>
@@ -355,52 +305,65 @@
         let currentPatientId = "";
         let currentRealLocation = "20.7002, 77.0082"; 
         let gpsActive = false;
-        
         let pName = "";
         let pMobile = "";
         let pAddress = "";
         let familyCounter = 1;
-        
-        // WATCH CONNECTION STATE
         let watchConnected = false; 
 
+        // YOUR GEMINI API KEY
         const apiKey = " "; 
 
+        // ==========================================
+        // ECG CANVAS VARIABLES
+        // ==========================================
+        let ecgCanvas, ecgCtx;
+        let ecgX = 0;
+        let lastEcgY = 0;
+        let jsBaseline = 0;
+        let canvasInitialized = false;
 
-// ==========================================
-        // 1. PERSISTENCE ENGINE (PATIENT)
+        function initCanvas() {
+            ecgCanvas = document.getElementById('ecgCanvas');
+            if(ecgCanvas) {
+                ecgCtx = ecgCanvas.getContext('2d');
+                ecgCanvas.width = ecgCanvas.offsetWidth;
+                ecgCanvas.height = ecgCanvas.offsetHeight;
+                lastEcgY = ecgCanvas.height / 2;
+                ecgCtx.lineWidth = 1.5;
+                ecgCtx.lineJoin = "round";
+                ecgCtx.strokeStyle = "#000000"; 
+                canvasInitialized = true;
+            }
+        }
+
+        // ==========================================
+        // 1. PERSISTENCE ENGINE
         // ==========================================
         (function checkSession() {
             const savedData = localStorage.getItem('patientProfile');
-            
             if (savedData) {
                 const profile = JSON.parse(savedData);
-                
-                // Hide login screen, show dashboard instantly
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-view').classList.remove('hidden');
 
-                // Restore variables
                 currentPatientId = profile.id;
                 pName = profile.name;
                 pMobile = profile.mobile;
                 pAddress = profile.address;
 
-                // Update UI Profile Data
                 document.getElementById('prof-pid').innerText = currentPatientId;
                 document.getElementById('prof-name').innerText = pName;
                 document.getElementById('prof-mobile').innerText = pMobile;
                 document.getElementById('prof-address').innerText = pAddress;
                 document.getElementById('qr-id-display').innerText = currentPatientId;
 
-                // Generate QR Codes
                 document.getElementById("qrcode-small").innerHTML = ""; 
                 new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
                 
                 document.getElementById("qrcode-large").innerHTML = ""; 
                 new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
 
-                // Initialize connection to Render server
                 if (typeof io !== 'undefined') {
                     socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
                     socket.on('connect', () => {
@@ -414,27 +377,20 @@
             }
         })();
 
-        // ==========================================
-        // LOGOUT & WIPE DATA 
-        // ==========================================
         function logout() { 
             if(confirm("Are you sure you want to log out?")) {
-                localStorage.removeItem('patientProfile'); // THIS DELETES THE MEMORY
-                window.location.reload(); // THIS RELOADS TO THE LOGIN SCREEN
+                localStorage.removeItem('patientProfile'); 
+                window.location.reload(); 
             }
         }
         
         function deleteAccount() {
             if(confirm("WARNING: This will permanently delete your profile. Proceed?")) {
-                localStorage.removeItem('patientProfile'); // THIS DELETES THE MEMORY
+                localStorage.removeItem('patientProfile'); 
                 window.location.reload();
             }
         }
-        
-        // ==========================================
-        // INITIALIZATION & UI TOGGLES
-        // ==========================================
-        
+
         function activatePatient() {
             pName = document.getElementById('patient-name').value.trim();
             const rawMobile = document.getElementById('patient-mobile').value.trim();
@@ -445,49 +401,35 @@
                 alert("Please fill in all details (Name, 10-digit Mobile, Home Address) to create your profile.");
                 return;
             }
-            
             pMobile = cCode + " " + rawMobile;
             
-            // Generate Unique ID 
             currentPatientId = "PT-" + Math.floor(1000 + Math.random() * 9000);
             const profile = { id: currentPatientId, name: pName, mobile: pMobile, address: pAddress };
             localStorage.setItem('patientProfile', JSON.stringify(profile));
 
             if (typeof io !== 'undefined') {
-                // Connecting to secure live Render URL with polling fallback transports
-                socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', {
-                    //transports: ['polling', 'websocket']
-                }); 
-                
+                socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
                 socket.on('connect', () => {
                     socket.emit('join_system', {
-                        room: 'room_' + currentPatientId,
-                        role: 'patient',
-                        patient_id: currentPatientId,
-                        name: pName,
-                        mobile: pMobile,
-                        address: pAddress
+                        room: 'room_' + currentPatientId, role: 'patient', patient_id: currentPatientId,
+                        name: pName, mobile: pMobile, address: pAddress
                     });
                 });
-
                 setupSocketListeners();
             }
 
-            // Populate Profile Data
             document.getElementById('prof-pid').innerText = currentPatientId;
             document.getElementById('prof-name').innerText = pName;
             document.getElementById('prof-mobile').innerText = pMobile;
             document.getElementById('prof-address').innerText = pAddress;
             document.getElementById('qr-id-display').innerText = currentPatientId;
 
-            // Generate QR Codes
             document.getElementById("qrcode-small").innerHTML = ""; 
             new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
             
             document.getElementById("qrcode-large").innerHTML = ""; 
             new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
 
-            // Switch Views
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
         }
@@ -496,12 +438,10 @@
             document.getElementById('main-view').classList.add('hidden');
             document.getElementById('profile-view').classList.remove('hidden');
         }
-
         function closeProfile() {
             document.getElementById('profile-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
         }
-
         function openQRFullscreen() { document.getElementById('qr-modal').classList.remove('hidden'); }
         function closeQRFullscreen() { document.getElementById('qr-modal').classList.add('hidden'); }
         function toggleNotifications() { alert("No new notifications."); }
@@ -561,6 +501,9 @@
             container.appendChild(card);
         }
 
+        // ==========================================
+        // AI CHAT
+        // ==========================================
         function openAIChat() {
             document.getElementById('ai-modal').classList.remove('hidden');
             setTimeout(() => document.getElementById('ai-input').focus(), 100);
@@ -614,7 +557,7 @@
 
             const currentBPM = document.getElementById('ppg-bpm').innerText;
             const currentECG = document.getElementById('ecg-status').innerText;
-            const prompt = `You are a helpful, reassuring AI Health Assistant built into a patient's smart wearable app. Live heart rate: ${currentBPM} BPM, ECG: ${currentECG}. Response brief (2-3 sentences), no markdown stars. Question: "${msg}"`;
+            const prompt = `You are a helpful AI Assistant in a smart wearable app. Live heart rate: ${currentBPM}, ECG: ${currentECG}. Response brief (2-3 sentences). Question: "${msg}"`;
 
             try {
                 const result = await fetchGeminiResponse(prompt);
@@ -632,6 +575,9 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
+        // ==========================================
+        // ALERTS & GPS
+        // ==========================================
         function startGPS() {
             if (gpsActive) return;
             gpsActive = true;
@@ -656,7 +602,6 @@
             audio.play().catch(e => console.log(e));
             document.getElementById('ecg-status').innerText = "ST-Elevation (CRITICAL)";
             document.getElementById('ecg-status').className = "text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold";
-            document.getElementById('ecg-line').style.color = "#f87171";
             startGPS();
         }
 
@@ -702,32 +647,23 @@
 
             try {
                 statusText.innerText = "Status: Scanning for Fire-Boltt...";
-                
-                // WITH THIS UPDATED FILTER:
-                // REPLACE THE PREVIOUS requestDevice BLOCK WITH THIS:
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [
-                        { namePrefix: 'FB' } // Forces Chrome to bypass filters for devices starting with "FB"
-                    ],
+                    filters: [{ namePrefix: 'FB' }],
                     optionalServices: [HR_SERVICE_UUID, 'heart_rate', 0x180D]
                 });
 
                 statusText.innerText = "Status: Connecting to " + device.name + "...";
-
-                // Connect to GATT Server
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(HR_SERVICE_UUID);
                 const characteristic = await service.getCharacteristic(HR_CHAR_UUID);
 
-                // Subscribe to Live Notifications
                 await characteristic.startNotifications();
                 
                 statusText.innerText = "Status: Connected & Streaming Live!";
-                statusText.style.color = "#34d399"; // Tailwind emerald-400
+                statusText.style.color = "#34d399"; 
                 connectBtn.style.display = "none";
-                watchConnected = true; // STOPS THE FAKE MATH.RANDOM DATA
+                watchConnected = true; 
 
-                // Parse Data Whenever Watch Sends a Heartbeat
                 characteristic.addEventListener('characteristicvaluechanged', (event) => {
                     const dataView = event.target.value;
                     const flags = dataView.getUint8(0);
@@ -739,10 +675,8 @@
                         bpm = dataView.getUint16(1, true);
                     }
 
-                    // 1. Update UI on phone immediately
                     bpmDisplay.innerText = bpm;
 
-                    // 2. Relay live reading to Render in background
                     if (currentPatientId) {
                         fetch(RENDER_ENDPOINT, {
                             method: "POST",
@@ -757,10 +691,9 @@
                     }
                 });
 
-                // Handle accidental disconnects (walking away from phone)
                 device.addEventListener('gattserverdisconnected', () => {
                     statusText.innerText = "Status: Watch Disconnected";
-                    statusText.style.color = "#f87171"; // Tailwind red-400
+                    statusText.style.color = "#f87171"; 
                     connectBtn.style.display = "block";
                     watchConnected = false;
                 });
@@ -772,123 +705,105 @@
             }
         }
 
-
         // ==========================================
-        // WEB SERIAL API (ESP32-C3 ECG CONNECTION)
+        // NEW: WEB BLUETOOTH API (ESP32-C3 CONNECTION)
         // ==========================================
-        let ecgPort;
-        let ecgCanvas = document.getElementById('ecgCanvas');
-        let ecgCtx = ecgCanvas.getContext('2d');
-        let ecgX = 0;
-        let lastEcgY = 0;
-        let canvasInitialized = false;
+        async function connectESP32BLE() {
+            if (!navigator.bluetooth) {
+                alert("Web Bluetooth is not supported. Please open this in Chrome on your phone.");
+                return;
+            }
 
-        async function connectESP32() {
-    if (!navigator.serial) {
-        alert("Web Serial API not supported in this browser. Please use Google Chrome or Edge on Desktop.");
-        return;
-    }
-
-    try {
-        ecgPort = await navigator.serial.requestPort();
-        await ecgPort.open({ baudRate: 115200 });
-        
-        // CRITICAL FIX: Force Chrome to tell the ESP32-C3 that a terminal is listening
-        await ecgPort.setSignals({ dataTerminalReady: true, requestToSend: true });
-        
-        document.getElementById('connectEcgBtn').innerText = "✅ ECG Live Stream Connected";
-        document.getElementById('connectEcgBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
-        document.getElementById('ecg-status').innerText = "Monitoring";
-
-        const textDecoder = new TextDecoderStream();
-        const readableStreamClosed = ecgPort.readable.pipeTo(textDecoder.writable);
-        const reader = textDecoder.readable.getReader();
-        let buffer = "";
-
-        ecgCanvas.width = ecgCanvas.offsetWidth;
-        ecgCanvas.height = ecgCanvas.offsetHeight;
-        lastEcgY = ecgCanvas.height / 2;
-        canvasInitialized = true;
-        
-        ecgCtx.lineWidth = 1.5;
-        ecgCtx.lineJoin = "round";
-        ecgCtx.strokeStyle = "#000000"; 
-
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            
-            buffer += value;
-            let lines = buffer.split("\n");
-            buffer = lines.pop(); 
-
-            for (let line of lines) {
-                line = line.trim();
-                if (line === "") continue;
+            try {
+                document.getElementById('ecg-status').innerText = "Scanning for BOSS-ECG...";
                 
-                // Extracts the last number in case grid data is mixed in
-                let parts = line.split("\t");
-                let ecgValue = parseInt(parts[parts.length - 1]);
-                
-                // if (!isNaN(ecgValue)) {
-                //     drawECGWave(ecgValue);
-                //     document.getElementById('ecg-mv').innerText = (ecgValue / 1000).toFixed(2);
-                // }
-                if (!isNaN(ecgValue)) {
-                    drawECGWave(ecgValue);
-                    let mvValue = (ecgValue / 1000).toFixed(2);
-                    document.getElementById('ecg-mv').innerText = mvValue;
+                // 1. Scan for the ESP32
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'BOSS-ECG' }],
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+                });
 
-                    // NEW: Stream the REAL ESP32 data to the Cloud!
-                    if (socket && currentPatientId) {
-                        socket.emit('stream_real_ecg', {
-                            patient_id: currentPatientId,
-                            raw_ecg: ecgValue,
-                            mv_ecg: mvValue
-                        });
+                // 2. Connect to the GATT Server
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                const characteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+
+                // 3. Start receiving live data
+                await characteristic.startNotifications();
+                
+                document.getElementById('connectEcgBtn').innerText = "✅ ESP32 Connected (Wireless)";
+                document.getElementById('connectEcgBtn').classList.replace('bg-slate-800', 'bg-blue-600');
+                document.getElementById('ecg-status').innerText = "Monitoring via BLE";
+                
+                if (!canvasInitialized) initCanvas();
+
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const decoder = new TextDecoder('utf-8');
+                    const line = decoder.decode(event.target.value).trim();
+                    
+                    if (line === "") return;
+                    
+                    let parts = line.split(",");
+                    let ecgValue = parseInt(parts[0]);
+                    let battValue = parseInt(parts[1]);
+
+                    if (!isNaN(ecgValue)) {
+                        drawECGWave(ecgValue);
+                        let mvValue = (ecgValue / 1000).toFixed(2);
+                        document.getElementById('ecg-mv').innerText = mvValue;
+
+                        // Update Battery UI and Stream to Render
+                        if (!isNaN(battValue)) {
+                            const battTxt = document.getElementById('patient-batt-txt');
+                            if (battTxt) battTxt.innerText = battValue + "%";
+                        }
+
+                        if (socket && currentPatientId) {
+                            socket.emit('stream_real_ecg', {
+                                patient_id: currentPatientId,
+                                raw_ecg: ecgValue,
+                                mv_ecg: mvValue,
+                                battery: battValue
+                            });
+                        }
                     }
-                }
+                });
+
+            } catch (err) {
+                console.error("BLE Error:", err);
+                document.getElementById('ecg-status').innerText = "Bluetooth Connection Failed";
             }
         }
-    } catch (err) {
-        console.error("Web Serial Error:", err);
-        alert("Failed to connect to ESP32-C3. Ensure the Arduino IDE is completely closed.");
-    }
-}
 
-       let jsBaseline = 0; // Add this new variable above the function
+        // ==========================================
+        // DYNAMIC ECG DRAWING FUNCTION
+        // ==========================================
+        function drawECGWave(value) {
+            if (!canvasInitialized) initCanvas();
+            if (!canvasInitialized) return;
 
-function drawECGWave(value) {
-    if (!canvasInitialized) return;
+            if (jsBaseline === 0) jsBaseline = value;
+            jsBaseline += (value - jsBaseline) * 0.05; 
+            let centeredValue = value - jsBaseline;
 
-    // 1. Dynamic Auto-Centering (DC Blocker) to eliminate baseline wander
-    if (jsBaseline === 0) jsBaseline = value;
-    jsBaseline += (value - jsBaseline) * 0.05; // 5% drift correction
-    let centeredValue = value - jsBaseline;
+            let scale = ecgCanvas.height / 1500; 
+            let newY = (ecgCanvas.height / 2) + (centeredValue * scale);
 
-    // 2. Scale and Polarity Flip (Notice the '+' instead of '-')
-    // Increase 1500 to 2000 if spikes are too tall and get cut off
-    let scale = ecgCanvas.height / 1500; 
-    let newY = (ecgCanvas.height / 2) + (centeredValue * scale);
+            ecgCtx.beginPath();
+            ecgCtx.moveTo(ecgX, lastEcgY);
+            ecgCtx.lineTo(ecgX + 2, newY);
+            ecgCtx.stroke();
 
-    // 3. Draw the crisp line segment
-    ecgCtx.beginPath();
-    ecgCtx.moveTo(ecgX, lastEcgY);
-    ecgCtx.lineTo(ecgX + 2, newY);
-    ecgCtx.stroke();
+            lastEcgY = newY;
+            ecgX += 2;
 
-    lastEcgY = newY;
-    ecgX += 2;
+            ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
 
-    // 4. Classic Hospital Sweep Effect
-    ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
-
-    // 5. Wrap around to the left edge
-    if (ecgX >= ecgCanvas.width) {
-        ecgX = 0;
-        ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); 
-    }
-}
+            if (ecgX >= ecgCanvas.width) {
+                ecgX = 0;
+                ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); 
+            }
+        }
     </script>
 </body>
 </html>
