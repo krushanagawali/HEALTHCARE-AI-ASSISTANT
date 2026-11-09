@@ -84,7 +84,7 @@
             <h1 class="text-xl font-bold text-white tracking-wide">Patient Dashboard</h1>
             
             <div class="flex items-center space-x-4">
-                <!-- NEW: Battery Indicator -->
+                <!-- Battery Indicator -->
                 <div id="battery-indicator" class="flex items-center space-x-1 text-emerald-400 text-xs font-bold bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17 4h-3V2h-4v2H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM9 13h6v2H9v-2z"></path></svg>
                     <span id="patient-batt-txt">--%</span>
@@ -151,7 +151,6 @@
                     <p class="text-white font-mono text-sm"><span id="ecg-mv">0.00</span> mV</p>
                 </div>
                 
-                <!-- NEW: WIRELESS BLUETOOTH CONNECT BUTTON -->
                 <button id="connectEcgBtn" onclick="connectESP32BLE()" class="w-full bg-slate-800 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-blue-500 mt-4">
                     📶 Connect Wireless ECG (Bluetooth)
                 </button>
@@ -715,11 +714,11 @@
             }
 
             try {
-                document.getElementById('ecg-status').innerText = "Scanning for AI-Health-ECG...";
+                document.getElementById('ecg-status').innerText = "Scanning for AI-ECG...";
                 
-                // 1. Scan for the ESP32
+                // 1. Scan for the EXACT name broadcasted by Arduino
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'AI-Health-ECG' }],
+                    filters: [{ name: 'AI-ECG' }],
                     optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
                 });
 
