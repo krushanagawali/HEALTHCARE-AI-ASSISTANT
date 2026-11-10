@@ -10,6 +10,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <!-- QR Code Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Chart.js for Historical Trends -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for Clinical Reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; } 
@@ -137,9 +141,16 @@
 
             <!-- ECG Sensor Reading -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
-                <div class="flex justify-between items-center mb-4">
+                <!-- <div class="flex justify-between items-center mb-4">
                     <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
                     <span id="ecg-status" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors">Awaiting Data</span>
+                </div> -->
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider">ECG Sensor Reading</h3>
+                    <div class="flex space-x-2">
+                        <span id="sqi-indicator" class="text-xs bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1 rounded font-bold transition-colors hidden sm:block">SQI: Standby</span>
+                        <span id="ecg-status" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors">Awaiting Data</span>
+                    </div>
                 </div>
                 
                 <div class="h-32 w-full ecg-paper rounded overflow-hidden relative border border-slate-700">
@@ -162,6 +173,37 @@
                         📶 Connect via Bluetooth
                     </button>
                 </div>
+            </div>
+
+            <!-- NEW: CLINICAL ANALYTICS CARD -->
+            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
+                <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4 border-b border-slate-800 pb-2">Clinical Analytics</h3>
+                
+                <!-- HRV & Arrhythmia -->
+                <div class="grid grid-cols-2 gap-4 mb-5">
+                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                        <p class="text-xs text-slate-400 mb-1">Heart Rate Var. (HRV)</p>
+                        <p class="text-2xl font-mono text-white"><span id="hrv-value">--</span> <span class="text-sm text-slate-500 font-sans">ms</span></p>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                        <p class="text-xs text-slate-400 mb-1">Rhythm Status</p>
+                        <p id="arrhythmia-status" class="text-sm font-bold text-slate-500 mt-2">Awaiting Data</p>
+                    </div>
+                </div>
+
+                <!-- 7-Day Trend Chart -->
+                <div class="mb-5">
+                    <p class="text-xs text-slate-400 mb-2 font-bold">7-Day Resting Heart Rate Trend</p>
+                    <div class="w-full h-32 relative">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- PDF Generator Button -->
+                <button onclick="generatePDFReport()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg transition border border-slate-600 flex items-center justify-center space-x-2 shadow-md">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span>Export Clinical PDF</span>
+                </button>
             </div>
 
             <!-- Alerts Section -->
@@ -353,6 +395,7 @@
                 const profile = JSON.parse(savedData);
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-view').classList.remove('hidden');
+                initTrendChart();
 
                 currentPatientId = profile.id;
                 pName = profile.name;
@@ -439,6 +482,7 @@
 
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
+            initTrendChart();
         }
 
         function openProfile() {
@@ -448,6 +492,7 @@
         function closeProfile() {
             document.getElementById('profile-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
+            initTrendChart();
         }
         function openQRFullscreen() { document.getElementById('qr-modal').classList.remove('hidden'); }
         function closeQRFullscreen() { document.getElementById('qr-modal').classList.add('hidden'); }
@@ -759,6 +804,8 @@
 
                         if (!isNaN(ecgValue)) {
                             drawECGWave(ecgValue);
+                            // Add this single line below drawECGWave(ecgValue);
+                        runAnalytics(ecgValue);
                             let mvValue = (ecgValue / 1000).toFixed(2);
                             document.getElementById('ecg-mv').innerText = mvValue;
 
@@ -830,6 +877,8 @@
 
                     if (!isNaN(ecgValue)) {
                         drawECGWave(ecgValue);
+                        // Add this single line below drawECGWave(ecgValue);
+                        runAnalytics(ecgValue);
                         let mvValue = (ecgValue / 1000).toFixed(2);
                         document.getElementById('ecg-mv').innerText = mvValue;
 
@@ -884,6 +933,161 @@
                 ecgX = 0;
                 ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); 
             }
+        }
+
+        // ==========================================
+        // CLINICAL ANALYTICS ENGINE (ML & EXPORT)
+        // ==========================================
+        let ecgHistory = [];
+        let rrIntervals = [];
+        let lastPeakTime = Date.now();
+        let chartInstance = null;
+
+        function runAnalytics(val) {
+            const now = Date.now();
+            ecgHistory.push(val);
+            if (ecgHistory.length > 150) ecgHistory.shift(); // Keep recent buffer
+
+            // 1. SQI (Signal Quality Indicator) Calculation
+            let maxV = Math.max(...ecgHistory);
+            let minV = Math.min(...ecgHistory);
+            let noise = maxV - minV;
+            const sqiEl = document.getElementById('sqi-indicator');
+            
+            if (noise > 8000) { // High static/movement threshold
+                sqiEl.innerText = "SQI: Noisy";
+                sqiEl.className = "text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-2 py-1 rounded font-bold transition-colors hidden sm:block";
+            } else {
+                sqiEl.innerText = "SQI: Clean";
+                sqiEl.className = "text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 px-2 py-1 rounded font-bold transition-colors hidden sm:block";
+            }
+
+            // 2. R-Peak Detection & HRV (Simplified Pan-Tompkins)
+            let dynamicThreshold = minV + (noise * 0.75); // Peak must be top 25% of wave
+            if (val > dynamicThreshold && noise > 500 && (now - lastPeakTime) > 350) { 
+                // 350ms lockout prevents double-counting the same heartbeat (max ~170 BPM)
+                let rr = now - lastPeakTime;
+                lastPeakTime = now;
+                
+                rrIntervals.push(rr);
+                if (rrIntervals.length > 20) rrIntervals.shift();
+
+                // Calculate RMSSD (Standard HRV Metric)
+                if (rrIntervals.length > 3) {
+                    let sumSq = 0;
+                    let arrhythmiaCount = 0;
+                    for (let i = 1; i < rrIntervals.length; i++) {
+                        let diff = rrIntervals[i] - rrIntervals[i-1];
+                        sumSq += (diff * diff);
+                        // If R-R gap jumps by more than 200ms suddenly, flag it
+                        if (Math.abs(diff) > 200) arrhythmiaCount++; 
+                    }
+                    let hrv = Math.sqrt(sumSq / (rrIntervals.length - 1));
+                    document.getElementById('hrv-value').innerText = Math.round(hrv);
+
+                    // 3. Arrhythmia Classification
+                    const arrEl = document.getElementById('arrhythmia-status');
+                    if (arrhythmiaCount >= 3) {
+                        arrEl.innerText = "Irregular (AFib Risk)";
+                        arrEl.className = "text-sm font-bold text-rose-500 mt-2 animate-pulse";
+                    } else {
+                        arrEl.innerText = "Normal Sinus Rhythm";
+                        arrEl.className = "text-sm font-bold text-emerald-400 mt-2";
+                    }
+                }
+            }
+        }
+
+        // Initialize the 7-Day Chart.js Trend
+        function initTrendChart() {
+            const ctx = document.getElementById('trendChart');
+            if(!ctx || chartInstance) return;
+            
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Avg Resting BPM',
+                        data: [72, 70, 75, 71, 74, 69, 72], // Simulated database history
+                        borderColor: '#34d399', // Emerald 400
+                        backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0f172a',
+                        pointBorderColor: '#34d399',
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 50, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+                        x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                    }
+                }
+            });
+        }
+
+        // Medical PDF Generator
+        function generatePDFReport() {
+            if (!window.jspdf) { alert("PDF Engine loading, please wait..."); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape'); // Wide format for ECG strip
+            
+            // Header
+            doc.setFillColor(15, 23, 42); // Slate 900
+            doc.rect(0, 0, 300, 20, 'F');
+            doc.setTextColor(255);
+            doc.setFontSize(14);
+            doc.text("Bharat Online Safety Services (BOSS) - Clinical ECG Report", 15, 13);
+            
+            // Patient Info
+            doc.setTextColor(0);
+            doc.setFontSize(12);
+            doc.text(`Patient Name: ${pName || 'Not Registered'}`, 15, 30);
+            doc.text(`Patient ID: ${currentPatientId || 'N/A'}`, 15, 38);
+            doc.text(`Date & Time: ${new Date().toLocaleString()}`, 15, 46);
+            
+            // Live Metrics
+            let currentHRV = document.getElementById('hrv-value').innerText;
+            let currentBPM = document.getElementById('ppg-bpm').innerText;
+            let rhythm = document.getElementById('arrhythmia-status').innerText;
+            
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Avg Heart Rate: ${currentBPM} BPM`, 180, 30);
+            doc.text(`Heart Rate Variability: ${currentHRV} ms`, 180, 38);
+            doc.setTextColor(rhythm.includes("Normal") ? 34 : 225, rhythm.includes("Normal") ? 197 : 29, 94); // Green or Red
+            doc.text(`Diagnosis: ${rhythm}`, 180, 46);
+            
+            // Capture High-Res ECG Canvas
+            let canvas = document.getElementById('ecgCanvas');
+            // Create a temporary white background version of the canvas for the PDF
+            let tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+            let tCtx = tempCanvas.getContext('2d');
+            tCtx.fillStyle = '#ffffff'; tCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height);
+            tCtx.drawImage(canvas, 0, 0);
+            
+            let imgData = tempCanvas.toDataURL("image/png", 1.0);
+            doc.addImage(imgData, 'PNG', 15, 60, 260, 80);
+            
+            // Box around the ECG
+            doc.setDrawColor(200);
+            doc.rect(15, 60, 260, 80);
+
+            // Footer
+            doc.setFontSize(9);
+            doc.setTextColor(150);
+            doc.text("This report is algorithmically generated and should be reviewed by a certified cardiologist.", 15, 155);
+            
+            // Save Trigger
+            doc.save(`AI_ECG_Report_${currentPatientId}.pdf`);
         }
     </script>
 </body>
