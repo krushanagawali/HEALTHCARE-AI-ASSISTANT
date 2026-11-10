@@ -84,7 +84,6 @@
             <h1 class="text-xl font-bold text-white tracking-wide">Patient Dashboard</h1>
             
             <div class="flex items-center space-x-4">
-                <!-- Battery Indicator -->
                 <div id="battery-indicator" class="flex items-center space-x-1 text-emerald-400 text-xs font-bold bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17 4h-3V2h-4v2H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM9 13h6v2H9v-2z"></path></svg>
                     <span id="patient-batt-txt">--%</span>
@@ -101,6 +100,7 @@
         </header>
 
         <main class="p-6 flex-1 space-y-6">
+            <!-- AI Assistant -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                 <h2 class="text-emerald-400 font-bold mb-3 flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -151,9 +151,17 @@
                     <p class="text-white font-mono text-sm"><span id="ecg-mv">0.00</span> mV</p>
                 </div>
                 
-                <button id="connectEcgBtn" onclick="connectESP32BLE()" class="w-full bg-slate-800 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-blue-500 mt-4">
-                    📶 Connect Wireless ECG (Bluetooth)
-                </button>
+                <!-- NEW: BOTH CONNECTION BUTTONS -->
+                <div class="space-y-3 mt-4">
+                    <!-- USB Button -->
+                    <button id="connectEcgUsbBtn" onclick="connectESP32USB()" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-emerald-500 flex items-center justify-center">
+                        🔌 Connect via USB Cable
+                    </button>
+                    <!-- Bluetooth Button -->
+                    <button id="connectEcgBleBtn" onclick="connectESP32BLE()" class="w-full bg-slate-800 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-blue-500 flex items-center justify-center">
+                        📶 Connect via Bluetooth
+                    </button>
+                </div>
             </div>
 
             <!-- Alerts Section -->
@@ -705,7 +713,80 @@
         }
 
         // ==========================================
-        // NEW: WEB BLUETOOTH API (ESP32-C3 CONNECTION)
+        // WEB SERIAL API (ESP32-C3 USB CONNECTION)
+        // ==========================================
+        async function connectESP32USB() {
+            if (!navigator.serial) {
+                alert("Web Serial API is only supported on Google Chrome / Edge on a Laptop or Desktop.");
+                return;
+            }
+
+            try {
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                // Forces Chrome to tell ESP32-C3 that a terminal is listening
+                await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+                
+                document.getElementById('connectEcgUsbBtn').innerText = "✅ USB Connected";
+                document.getElementById('connectEcgUsbBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
+                document.getElementById('connectEcgBleBtn').style.display = "none"; // Hide BLE button
+                document.getElementById('ecg-status').innerText = "Monitoring via USB";
+
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                const reader = textDecoder.readable.getReader();
+                let buffer = "";
+
+                if (!canvasInitialized) initCanvas();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += value;
+                    let lines = buffer.split("\n");
+                    buffer = lines.pop(); 
+
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line === "") continue;
+                        
+                        // Parse "ECG,BATTERY" from USB Serial
+                        let parts = line.split(",");
+                        let ecgValue = parseInt(parts[0]);
+                        let battValue = parseInt(parts[1]);
+
+                        if (!isNaN(ecgValue)) {
+                            drawECGWave(ecgValue);
+                            let mvValue = (ecgValue / 1000).toFixed(2);
+                            document.getElementById('ecg-mv').innerText = mvValue;
+
+                            // Update Battery UI and Stream to Render
+                            if (!isNaN(battValue)) {
+                                const battTxt = document.getElementById('patient-batt-txt');
+                                if (battTxt) battTxt.innerText = battValue + "%";
+                            }
+
+                            if (socket && currentPatientId) {
+                                socket.emit('stream_real_ecg', {
+                                    patient_id: currentPatientId,
+                                    raw_ecg: ecgValue,
+                                    mv_ecg: mvValue,
+                                    battery: battValue
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("USB Error:", err);
+                alert("Failed to connect via USB. Make sure the Arduino IDE Serial Monitor is closed.");
+            }
+        }
+
+        // ==========================================
+        // WEB BLUETOOTH API (ESP32-C3 BLE CONNECTION)
         // ==========================================
         async function connectESP32BLE() {
             if (!navigator.bluetooth) {
@@ -716,7 +797,7 @@
             try {
                 document.getElementById('ecg-status').innerText = "Scanning for AI-ECG...";
                 
-                // 1. Scan for the EXACT name broadcasted by Arduino
+                // 1. Scan for the ESP32
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'AI-ECG' }],
                     optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
@@ -730,8 +811,9 @@
                 // 3. Start receiving live data
                 await characteristic.startNotifications();
                 
-                document.getElementById('connectEcgBtn').innerText = "✅ ESP32 Connected (Wireless)";
-                document.getElementById('connectEcgBtn').classList.replace('bg-slate-800', 'bg-blue-600');
+                document.getElementById('connectEcgBleBtn').innerText = "✅ Bluetooth Connected";
+                document.getElementById('connectEcgBleBtn').classList.replace('bg-slate-800', 'bg-blue-600');
+                document.getElementById('connectEcgUsbBtn').style.display = "none"; // Hide USB button
                 document.getElementById('ecg-status').innerText = "Monitoring via BLE";
                 
                 if (!canvasInitialized) initCanvas();
