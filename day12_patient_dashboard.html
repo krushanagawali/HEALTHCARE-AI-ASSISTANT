@@ -342,7 +342,7 @@
         </div>
     </div>
 
-    <script>
+    <!-- <script>
         // ==========================================
         // STATE VARIABLES
         // ==========================================
@@ -1091,6 +1091,778 @@
             
             // Save Trigger
             doc.save(`AI_ECG_Report_${currentPatientId}.pdf`);
+        } -->
+    <!-- </script> -->
+
+
+
+
+
+
+
+
+    <script>
+        // ==========================================
+        // STATE VARIABLES
+        // ==========================================
+        let socket;
+        let currentPatientId = "";
+        let currentRealLocation = "20.7002, 77.0082"; 
+        let gpsActive = false;
+        let pName = "";
+        let pMobile = "";
+        let pAddress = "";
+        let familyCounter = 1;
+        let watchConnected = false; 
+
+        // YOUR GEMINI API KEY
+        const apiKey = " "; 
+
+        // ==========================================
+        // ECG CANVAS VARIABLES
+        // ==========================================
+        let ecgCanvas, ecgCtx;
+        let ecgX = 0;
+        let lastEcgY = 0;
+        let jsBaseline = 0;
+        let canvasInitialized = false;
+
+        function initCanvas() {
+            ecgCanvas = document.getElementById('ecgCanvas');
+            if(ecgCanvas) {
+                ecgCtx = ecgCanvas.getContext('2d');
+                ecgCanvas.width = ecgCanvas.offsetWidth;
+                ecgCanvas.height = ecgCanvas.offsetHeight;
+                lastEcgY = ecgCanvas.height / 2;
+                ecgCtx.lineWidth = 1.5;
+                ecgCtx.lineJoin = "round";
+                ecgCtx.strokeStyle = "#000000"; 
+                ecgCtx.shadowBlur = 0; 
+                canvasInitialized = true;
+            }
+        }
+
+        // ==========================================
+        // 1. PERSISTENCE ENGINE
+        // ==========================================
+        (function checkSession() {
+            const savedData = localStorage.getItem('patientProfile');
+            if (savedData) {
+                const profile = JSON.parse(savedData);
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('main-view').classList.remove('hidden');
+                initTrendChart();
+
+                currentPatientId = profile.id;
+                pName = profile.name;
+                pMobile = profile.mobile;
+                pAddress = profile.address;
+
+                document.getElementById('prof-pid').innerText = currentPatientId;
+                document.getElementById('prof-name').innerText = pName;
+                document.getElementById('prof-mobile').innerText = pMobile;
+                document.getElementById('prof-address').innerText = pAddress;
+                document.getElementById('qr-id-display').innerText = currentPatientId;
+
+                document.getElementById("qrcode-small").innerHTML = ""; 
+                new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
+                
+                document.getElementById("qrcode-large").innerHTML = ""; 
+                new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+
+                if (typeof io !== 'undefined') {
+                    socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
+                    socket.on('connect', () => {
+                        socket.emit('join_system', {
+                            room: 'room_' + currentPatientId, role: 'patient', patient_id: currentPatientId,
+                            name: pName, mobile: pMobile, address: pAddress
+                        });
+                    });
+                    setupSocketListeners();
+                }
+            }
+        })();
+
+        function logout() { 
+            if(confirm("Are you sure you want to log out?")) {
+                localStorage.removeItem('patientProfile'); 
+                window.location.reload(); 
+            }
+        }
+        
+        function deleteAccount() {
+            if(confirm("WARNING: This will permanently delete your profile. Proceed?")) {
+                localStorage.removeItem('patientProfile'); 
+                window.location.reload();
+            }
+        }
+
+        function activatePatient() {
+            pName = document.getElementById('patient-name').value.trim();
+            const rawMobile = document.getElementById('patient-mobile').value.trim();
+            const cCode = document.getElementById('country-code').value;
+            pAddress = document.getElementById('patient-address').value.trim();
+
+            if(!pName || !rawMobile || rawMobile.length < 10 || !pAddress) {
+                alert("Please fill in all details (Name, 10-digit Mobile, Home Address) to create your profile.");
+                return;
+            }
+            pMobile = cCode + " " + rawMobile;
+            
+            currentPatientId = "PT-" + Math.floor(1000 + Math.random() * 9000);
+            const profile = { id: currentPatientId, name: pName, mobile: pMobile, address: pAddress };
+            localStorage.setItem('patientProfile', JSON.stringify(profile));
+
+            if (typeof io !== 'undefined') {
+                socket = io('https://healthcare-ai-assistant-d3p8.onrender.com', { transports: ['polling', 'websocket'] }); 
+                socket.on('connect', () => {
+                    socket.emit('join_system', {
+                        room: 'room_' + currentPatientId, role: 'patient', patient_id: currentPatientId,
+                        name: pName, mobile: pMobile, address: pAddress
+                    });
+                });
+                setupSocketListeners();
+            }
+
+            document.getElementById('prof-pid').innerText = currentPatientId;
+            document.getElementById('prof-name').innerText = pName;
+            document.getElementById('prof-mobile').innerText = pMobile;
+            document.getElementById('prof-address').innerText = pAddress;
+            document.getElementById('qr-id-display').innerText = currentPatientId;
+
+            document.getElementById("qrcode-small").innerHTML = ""; 
+            new QRCode(document.getElementById("qrcode-small"), { text: currentPatientId, width: 32, height: 32, colorDark : "#0f172a", colorLight : "#ffffff" });
+            
+            document.getElementById("qrcode-large").innerHTML = ""; 
+            new QRCode(document.getElementById("qrcode-large"), { text: currentPatientId, width: 250, height: 250, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+            initTrendChart();
+        }
+
+        function openProfile() {
+            document.getElementById('main-view').classList.add('hidden');
+            document.getElementById('profile-view').classList.remove('hidden');
+        }
+        function closeProfile() {
+            document.getElementById('profile-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+            initTrendChart();
+        }
+        function openQRFullscreen() { document.getElementById('qr-modal').classList.remove('hidden'); }
+        function closeQRFullscreen() { document.getElementById('qr-modal').classList.add('hidden'); }
+        function toggleNotifications() { alert("No new notifications."); }
+        
+        // ==========================================
+        // SOCKET.IO LISTENERS
+        // ==========================================
+        function setupSocketListeners() {
+            socket.on('family_connected', (data) => {
+                const address = data.address || "Location active. Shared access granted via secure QR.";
+                addFamilyMemberToProfile(data.name, data.mobile, address);
+            });
+
+            socket.on('existing_family', (familyList) => {
+                const container = document.getElementById('family-info-container');
+                if (familyList.length > 0) {
+                    container.innerHTML = ''; 
+                    familyList.forEach(member => {
+                        const address = member[2] || "Location active. Shared access granted via secure QR.";
+                        addFamilyMemberToProfile(member[0], member[1], address); 
+                    });
+                }
+            });
+
+            socket.on('stemi_alert', (data) => {
+                triggerLocalAlert();
+            });
+
+            socket.on('ambulance_dispatched', () => {
+                const statusDiv = document.getElementById('ambulance-status');
+                statusDiv.classList.replace('text-yellow-400', 'text-emerald-400');
+                statusDiv.classList.remove('animate-pulse');
+                statusDiv.innerHTML = `
+                    <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 17.5A2.5 2.5 0 0116.5 20h-9A2.5 2.5 0 015 17.5m14 0V9a2 2 0 00-2-2h-3.5L12 4.5M5 17.5V11a2 2 0 012-2h1.5l1.5-2.5m-5 11a2.5 2.5 0 01-2.5-2.5V11"></path></svg>
+                    <span class="text-2xl font-bold text-center">AMBULANCE EN ROUTE!</span>
+                `;
+            });
+        }
+
+        function addFamilyMemberToProfile(fName, fMobile, fAddress) {
+            const container = document.getElementById('family-info-container');
+            const noMsg = document.getElementById('no-family-msg');
+            if(noMsg) noMsg.remove();
+
+            const fId = "FM-" + ( familyCounter++);
+            const card = document.createElement('div');
+            card.className = "bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 space-y-2 text-sm shadow-sm";
+            card.innerHTML = `
+                <p class="flex justify-between"><span class="text-slate-500">Family ID:</span> <span class="text-white font-mono font-bold">${fId}</span></p>
+                <p class="flex justify-between"><span class="text-slate-500">Name:</span> <span class="text-white font-medium">${fName}</span></p>
+                <p class="flex justify-between"><span class="text-slate-500">Mobile No:</span> <span class="text-emerald-400 font-medium">${fMobile}</span></p>
+                <div class="flex flex-col pt-1">
+                    <span class="text-slate-500 mb-1">Address:</span> 
+                    <span class="text-slate-300 bg-slate-900 p-3 rounded-lg text-xs leading-relaxed border border-slate-800">${fAddress}</span>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        // ==========================================
+        // AI CHAT
+        // ==========================================
+        function openAIChat() {
+            document.getElementById('ai-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('ai-input').focus(), 100);
+        }
+        function closeAIChat() { document.getElementById('ai-modal').classList.add('hidden'); }
+
+        async function fetchGeminiResponse(prompt, retries = 5) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            let delay = 1000;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    return await res.json();
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        async function handleAIChat(e) {
+            e.preventDefault();
+            const inputField = document.getElementById('ai-input');
+            const msg = inputField.value.trim();
+            if(!msg) return;
+
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `
+                <div class="flex items-start justify-end mb-4">
+                    <div class="bg-emerald-600 rounded-2xl rounded-tr-none p-3 text-white text-sm max-w-[85%] shadow-md">${msg}</div>
+                </div>`;
+            inputField.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const loadingId = 'loading-' + Date.now();
+            chatBox.innerHTML += `
+                <div id="${loadingId}" class="flex items-start mb-4">
+                    <div class="w-8 h-8 bg-emerald-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1">
+                        <span class="text-white text-xs animate-pulse">...</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-400 text-sm italic border border-slate-700">Analyzing metrics...</div>
+                </div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const currentBPM = document.getElementById('ppg-bpm').innerText;
+            const currentECG = document.getElementById('ecg-status').innerText;
+            const prompt = `You are a helpful AI Assistant in a smart wearable app. Live heart rate: ${currentBPM}, ECG: ${currentECG}. Response brief (2-3 sentences). Question: "${msg}"`;
+
+            try {
+                const result = await fetchGeminiResponse(prompt);
+                const replyText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Trouble processing request.";
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `
+                    <div class="flex items-start mb-4">
+                        <div class="w-8 h-8 bg-emerald-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+                        <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-300 text-sm max-w-[85%] border border-slate-700">${replyText}</div>
+                    </div>`;
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `<div class="flex items-start mb-4"><div class="bg-red-900/30 p-4 text-red-400 text-sm rounded-xl">Connection error.</div></div>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // ==========================================
+        // ALERTS & GPS
+        // ==========================================
+        function startGPS() {
+            if (gpsActive) return;
+            gpsActive = true;
+            const gpsInd = document.getElementById('gps-status-indicator');
+            if(gpsInd) {
+                gpsInd.className = "flex items-center space-x-1 text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded animate-pulse";
+                gpsInd.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg><span>Location: ACTIVE</span>`;
+            }
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(
+                    (position) => { currentRealLocation = `${position.coords.latitude}, ${position.coords.longitude}`; },
+                    (error) => { console.error(error); },
+                    { enableHighAccuracy: true }
+                );
+            }
+        }
+
+        function triggerLocalAlert() {
+            document.getElementById('idle-state').classList.add('hidden');
+            document.getElementById('alert-state').classList.remove('hidden');
+            let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
+            audio.play().catch(e => console.log(e));
+            document.getElementById('ecg-status').innerText = "ST-Elevation (CRITICAL)";
+            document.getElementById('ecg-status').className = "text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold";
+            startGPS();
+        }
+
+        function triggerRealLocationSOS() {
+            if (!currentPatientId) { alert("Please activate your profile first!"); return; }
+            triggerLocalAlert();
+
+            const payload = {
+                "patient_id": currentPatientId, 
+                "gps_location": currentRealLocation, 
+                "danger_score": 0.95,
+                "token": "my-secret-watch-token" 
+            };
+
+            fetch('https://healthcare-ai-assistant-d3p8.onrender.com/emergency_dispatch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => console.log("SOS Dispatch fired successfully to Render!"))
+            .catch(e => {
+                console.error(e);
+                alert("Network Routing Error. Please verify your Render server is running.");
+            });
+        }
+
+        // ==========================================
+        // WEB BLUETOOTH API (FIRE-BOLTT CONNECTION)
+        // ==========================================
+        const HR_SERVICE_UUID = 0x180D; 
+        const HR_CHAR_UUID    = 0x2A37; 
+        const RENDER_ENDPOINT = "https://healthcare-ai-assistant-d3p8.onrender.com/update_vitals";
+
+        async function connectFireBoltt() {
+            const statusText = document.getElementById("connectionStatus");
+            const bpmDisplay = document.getElementById("ppg-bpm");
+            const connectBtn = document.getElementById("connectWatchBtn");
+
+            if (!navigator.bluetooth) {
+                alert("Web Bluetooth is not supported on this browser. Please open in Google Chrome on Android.");
+                return;
+            }
+
+            try {
+                statusText.innerText = "Status: Scanning for Fire-Boltt...";
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'FB' }],
+                    optionalServices: [HR_SERVICE_UUID, 'heart_rate', 0x180D]
+                });
+
+                statusText.innerText = "Status: Connecting to " + device.name + "...";
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(HR_SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(HR_CHAR_UUID);
+
+                await characteristic.startNotifications();
+                
+                statusText.innerText = "Status: Connected & Streaming Live!";
+                statusText.style.color = "#34d399"; 
+                connectBtn.style.display = "none";
+                watchConnected = true; 
+
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const dataView = event.target.value;
+                    const flags = dataView.getUint8(0);
+                    
+                    let bpm = 0;
+                    if ((flags & 0x01) === 0) {
+                        bpm = dataView.getUint8(1);
+                    } else {
+                        bpm = dataView.getUint16(1, true);
+                    }
+
+                    // Only update BPM from watch if we don't have live ECG
+                    if(!canvasInitialized) {
+                        bpmDisplay.innerText = bpm;
+                    }
+
+                    if (currentPatientId) {
+                        fetch(RENDER_ENDPOINT, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                patient_id: currentPatientId,
+                                heart_rate: bpm,
+                                status: bpm >= 120 ? "elevated" : "nominal",
+                                timestamp: new Date().toLocaleTimeString()
+                            })
+                        }).catch(err => console.log("Render dispatch skipped/error:", err));
+                    }
+                });
+
+                device.addEventListener('gattserverdisconnected', () => {
+                    statusText.innerText = "Status: Watch Disconnected";
+                    statusText.style.color = "#f87171"; 
+                    connectBtn.style.display = "block";
+                    watchConnected = false;
+                });
+
+            } catch (error) {
+                console.error("Bluetooth connection error:", error);
+                statusText.innerText = "Status: Connection Failed or Cancelled";
+                statusText.style.color = "#f87171";
+            }
+        }
+
+        // ==========================================
+        // WEB SERIAL API (ESP32-C3 USB CONNECTION)
+        // ==========================================
+        async function connectESP32USB() {
+            if (!navigator.serial) {
+                alert("Web Serial API is only supported on Google Chrome / Edge on a Laptop or Desktop.");
+                return;
+            }
+
+            try {
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                // Forces Chrome to tell ESP32-C3 that a terminal is listening
+                await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+                
+                document.getElementById('connectEcgUsbBtn').innerText = "✅ USB Connected";
+                document.getElementById('connectEcgUsbBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
+                document.getElementById('connectEcgBleBtn').style.display = "none"; // Hide BLE button
+                document.getElementById('ecg-status').innerText = "Monitoring via USB";
+                document.getElementById('ecg-status').className = "text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                const reader = textDecoder.readable.getReader();
+                let buffer = "";
+
+                if (!canvasInitialized) initCanvas();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += value;
+                    let lines = buffer.split("\n");
+                    buffer = lines.pop(); 
+
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line === "") continue;
+                        
+                        let parts = line.split(",");
+                        let ecgValue = parseInt(parts[0]);
+                        let battValue = parseInt(parts[1]);
+
+                        if (!isNaN(ecgValue)) {
+                            drawECGWave(ecgValue);
+                            runAnalytics(ecgValue);
+                            let mvValue = (ecgValue / 1000).toFixed(2);
+                            document.getElementById('ecg-mv').innerText = mvValue;
+
+                            if (!isNaN(battValue)) {
+                                const battTxt = document.getElementById('patient-batt-txt');
+                                if (battTxt) battTxt.innerText = battValue + "%";
+                            }
+
+                            if (socket && currentPatientId) {
+                                socket.emit('stream_real_ecg', {
+                                    patient_id: currentPatientId,
+                                    raw_ecg: ecgValue,
+                                    mv_ecg: mvValue,
+                                    battery: battValue
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("USB Error:", err);
+                alert("Failed to connect via USB. Make sure the Arduino IDE Serial Monitor is closed.");
+            }
+        }
+
+        // ==========================================
+        // WEB BLUETOOTH API (ESP32-C3 BLE CONNECTION)
+        // ==========================================
+        async function connectESP32BLE() {
+            if (!navigator.bluetooth) {
+                alert("Web Bluetooth is not supported. Please open this in Chrome on your phone.");
+                return;
+            }
+
+            try {
+                document.getElementById('ecg-status').innerText = "Scanning for AI-ECG...";
+                
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'AI-ECG' }],
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+                });
+
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                const characteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+
+                await characteristic.startNotifications();
+                
+                document.getElementById('connectEcgBleBtn').innerText = "✅ Bluetooth Connected";
+                document.getElementById('connectEcgBleBtn').classList.replace('bg-slate-800', 'bg-blue-600');
+                document.getElementById('connectEcgUsbBtn').style.display = "none"; // Hide USB button
+                document.getElementById('ecg-status').innerText = "Monitoring via BLE";
+                document.getElementById('ecg-status').className = "text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
+                
+                if (!canvasInitialized) initCanvas();
+
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const decoder = new TextDecoder('utf-8');
+                    const line = decoder.decode(event.target.value).trim();
+                    
+                    if (line === "") return;
+                    
+                    let parts = line.split(",");
+                    let ecgValue = parseInt(parts[0]);
+                    let battValue = parseInt(parts[1]);
+
+                    if (!isNaN(ecgValue)) {
+                        drawECGWave(ecgValue);
+                        runAnalytics(ecgValue);
+                        let mvValue = (ecgValue / 1000).toFixed(2);
+                        document.getElementById('ecg-mv').innerText = mvValue;
+
+                        if (!isNaN(battValue)) {
+                            const battTxt = document.getElementById('patient-batt-txt');
+                            if (battTxt) battTxt.innerText = battValue + "%";
+                        }
+
+                        if (socket && currentPatientId) {
+                            socket.emit('stream_real_ecg', {
+                                patient_id: currentPatientId,
+                                raw_ecg: ecgValue,
+                                mv_ecg: mvValue,
+                                battery: battValue
+                            });
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("BLE Error:", err);
+                document.getElementById('ecg-status').innerText = "Bluetooth Connection Failed";
+                document.getElementById('ecg-status').className = "text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
+            }
+        }
+
+        // ==========================================
+        // DYNAMIC ECG DRAWING FUNCTION
+        // ==========================================
+        function drawECGWave(value) {
+            if (!canvasInitialized) initCanvas();
+            if (!canvasInitialized) return;
+
+            if (jsBaseline === 0) jsBaseline = value;
+            jsBaseline += (value - jsBaseline) * 0.05; 
+            let centeredValue = value - jsBaseline;
+
+            let scale = ecgCanvas.height / 1500; 
+            let newY = (ecgCanvas.height / 2) + (centeredValue * scale);
+
+            ecgCtx.beginPath();
+            ecgCtx.moveTo(ecgX, lastEcgY);
+            ecgCtx.lineTo(ecgX + 2, newY);
+            ecgCtx.stroke();
+
+            lastEcgY = newY;
+            ecgX += 2;
+
+            ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
+
+            if (ecgX >= ecgCanvas.width) {
+                ecgX = 0;
+                ecgCtx.clearRect(0, 0, 10, ecgCanvas.height); 
+            }
+        }
+
+        // ==========================================
+        // CLINICAL ANALYTICS ENGINE (ML, EXPORT & LIVE CHART)
+        // ==========================================
+        let ecgHistory = [];
+        let rrIntervals = [];
+        let lastPeakTime = Date.now();
+        let chartInstance = null;
+        
+        // Arrays to hold the live dynamic data for the chart
+        let liveChartLabels = ['0s', '10s', '20s', '30s', '40s', '50s', '60s'];
+        let liveChartData = [0, 0, 0, 0, 0, 0, 0];
+        let lastChartUpdate = Date.now();
+
+        function runAnalytics(val) {
+            const now = Date.now();
+            ecgHistory.push(val);
+            if (ecgHistory.length > 150) ecgHistory.shift(); 
+
+            // 1. SQI Calculation
+            let maxV = Math.max(...ecgHistory);
+            let minV = Math.min(...ecgHistory);
+            let noise = maxV - minV;
+            const sqiEl = document.getElementById('sqi-indicator');
+            
+            if (noise > 8000) { 
+                sqiEl.innerText = "SQI: Noisy";
+                sqiEl.className = "text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-2 py-1 rounded font-bold transition-colors hidden sm:block";
+            } else {
+                sqiEl.innerText = "SQI: Clean";
+                sqiEl.className = "text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 px-2 py-1 rounded font-bold transition-colors hidden sm:block";
+            }
+
+            // 2. R-Peak Detection
+            let dynamicThreshold = minV + (noise * 0.75); 
+            if (val > dynamicThreshold && noise > 500 && (now - lastPeakTime) > 350) { 
+                let rr = now - lastPeakTime;
+                lastPeakTime = now;
+                
+                rrIntervals.push(rr);
+                if (rrIntervals.length > 20) rrIntervals.shift();
+                
+                // Calculate Real-Time BPM from ECG Data
+                let realBpm = Math.round(60000 / rr);
+                // Filter out impossible spikes
+                if(realBpm > 40 && realBpm < 220) {
+                    document.getElementById('ppg-bpm').innerText = realBpm;
+                    
+                    // Update the dynamic chart every 10 seconds
+                    if (now - lastChartUpdate > 10000 && chartInstance) {
+                        liveChartData.shift();
+                        liveChartData.push(realBpm);
+                        chartInstance.update();
+                        lastChartUpdate = now;
+                    }
+                }
+
+                // Calculate RMSSD (HRV)
+                if (rrIntervals.length > 3) {
+                    let sumSq = 0;
+                    let arrhythmiaCount = 0;
+                    for (let i = 1; i < rrIntervals.length; i++) {
+                        let diff = rrIntervals[i] - rrIntervals[i-1];
+                        sumSq += (diff * diff);
+                        if (Math.abs(diff) > 200) arrhythmiaCount++; 
+                    }
+                    let hrv = Math.sqrt(sumSq / (rrIntervals.length - 1));
+                    document.getElementById('hrv-value').innerText = Math.round(hrv);
+
+                    // 3. Arrhythmia Classification
+                    const arrEl = document.getElementById('arrhythmia-status');
+                    if (arrhythmiaCount >= 3) {
+                        arrEl.innerText = "Irregular (AFib Risk)";
+                        arrEl.className = "text-sm font-bold text-rose-500 mt-2 animate-pulse";
+                        
+                        if (document.getElementById('alert-state').classList.contains('hidden')) {
+                            triggerRealLocationSOS();
+                        }
+                    } else {
+                        arrEl.innerText = "Normal Sinus Rhythm";
+                        arrEl.className = "text-sm font-bold text-emerald-400 mt-2";
+                    }
+                }
+            }
+        }
+
+        // Initialize dynamic live chart
+        function initTrendChart() {
+            const ctx = document.getElementById('trendChart');
+            if(!ctx || chartInstance) return;
+            
+            // Change the label from "7-Day" to "Live Session" in the HTML dynamically
+            let titleEl = ctx.parentElement.previousElementSibling;
+            if(titleEl) titleEl.innerText = "Live Session Heart Rate Trend";
+            
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: liveChartLabels,
+                    datasets: [{
+                        label: 'Live BPM',
+                        data: liveChartData, 
+                        borderColor: '#34d399',
+                        backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0f172a',
+                        pointBorderColor: '#34d399',
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: {enabled: false} },
+                    scales: {
+                        y: { min: 40, max: 140, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+                        x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                    },
+                    animation: {
+                        duration: 0 
+                    }
+                }
+            });
+        }
+
+        // Medical PDF Generator
+        function generatePDFReport() {
+            if (!window.jspdf) { alert("PDF Engine loading, please wait..."); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape'); 
+            
+            doc.setFillColor(15, 23, 42);
+            doc.rect(0, 0, 300, 20, 'F');
+            doc.setTextColor(255);
+            doc.setFontSize(14);
+            doc.text("Bharat Online Safety Services (BOSS) - Clinical ECG Report", 15, 13);
+            
+            doc.setTextColor(0);
+            doc.setFontSize(12);
+            doc.text(`Patient Name: ${pName || 'Not Registered'}`, 15, 30);
+            doc.text(`Patient ID: ${currentPatientId || 'N/A'}`, 15, 38);
+            doc.text(`Date & Time: ${new Date().toLocaleString()}`, 15, 46);
+            
+            let currentHRV = document.getElementById('hrv-value').innerText;
+            let currentBPM = document.getElementById('ppg-bpm').innerText;
+            let rhythm = document.getElementById('arrhythmia-status').innerText;
+            
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Avg Heart Rate: ${currentBPM} BPM`, 180, 30);
+            doc.text(`Heart Rate Variability: ${currentHRV} ms`, 180, 38);
+            doc.setTextColor(rhythm.includes("Normal") ? 34 : 225, rhythm.includes("Normal") ? 197 : 29, 94); 
+            doc.text(`Diagnosis: ${rhythm}`, 180, 46);
+            
+            let canvas = document.getElementById('ecgCanvas');
+            let tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+            let tCtx = tempCanvas.getContext('2d');
+            tCtx.fillStyle = '#ffffff'; tCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height);
+            tCtx.drawImage(canvas, 0, 0);
+            
+            let imgData = tempCanvas.toDataURL("image/png", 1.0);
+            doc.addImage(imgData, 'PNG', 15, 60, 260, 80);
+            
+            doc.setDrawColor(200);
+            doc.rect(15, 60, 260, 80);
+
+            doc.setFontSize(9);
+            doc.setTextColor(150);
+            doc.text("This report is algorithmically generated and should be reviewed by a certified cardiologist.", 15, 155);
+            
+            doc.save(`BOSS_ECG_Report_${currentPatientId}.pdf`);
         }
     </script>
 </body>
