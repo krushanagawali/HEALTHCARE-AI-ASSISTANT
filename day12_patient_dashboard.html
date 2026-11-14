@@ -985,11 +985,26 @@
                     let hrv = Math.sqrt(sumSq / (rrIntervals.length - 1));
                     document.getElementById('hrv-value').innerText = Math.round(hrv);
 
+                    // // 3. Arrhythmia Classification
+                    // const arrEl = document.getElementById('arrhythmia-status');
+                    // if (arrhythmiaCount >= 3) {
+                    //     arrEl.innerText = "Irregular (AFib Risk)";
+                    //     arrEl.className = "text-sm font-bold text-rose-500 mt-2 animate-pulse";
+                    // } else {
+                    //     arrEl.innerText = "Normal Sinus Rhythm";
+                    //     arrEl.className = "text-sm font-bold text-emerald-400 mt-2";
+                    // }
+
                     // 3. Arrhythmia Classification
                     const arrEl = document.getElementById('arrhythmia-status');
                     if (arrhythmiaCount >= 3) {
                         arrEl.innerText = "Irregular (AFib Risk)";
                         arrEl.className = "text-sm font-bold text-rose-500 mt-2 animate-pulse";
+                        
+                        // NEW: Automatically trigger the red SOS alert!
+                        if (document.getElementById('alert-state').classList.contains('hidden')) {
+                            triggerRealLocationSOS();
+                        }
                     } else {
                         arrEl.innerText = "Normal Sinus Rhythm";
                         arrEl.className = "text-sm font-bold text-emerald-400 mt-2";
