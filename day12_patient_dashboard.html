@@ -561,7 +561,7 @@
         function closeAIChat() { document.getElementById('ai-modal').classList.add('hidden'); }
 
         async function fetchGeminiResponse(prompt, retries = 5) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const url = ``;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
             let delay = 1000;
             for (let i = 0; i < retries; i++) {
@@ -1319,7 +1319,7 @@
         function closeAIChat() { document.getElementById('ai-modal').classList.add('hidden'); }
 
         async function fetchGeminiResponse(prompt, retries = 5) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const url = ``;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
             let delay = 1000;
             for (let i = 0; i < retries; i++) {
