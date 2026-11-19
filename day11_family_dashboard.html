@@ -428,7 +428,6 @@
         let ecgX = 0;
         let lastEcgY = 0;
         let jsBaseline = 0;
-        let maxPeak = 10;
         let canvasInitialized = false;
         
         function initCanvas() {
@@ -440,10 +439,9 @@
                 ecgX = 0;
                 lastEcgY = ecgCanvas.height / 2;
                 jsBaseline = 0;
-                maxPeak = 10;
-                ecgCtx.lineWidth = 1.6;
+                ecgCtx.lineWidth = 1.5;
                 ecgCtx.lineJoin = "round";
-                ecgCtx.strokeStyle = "#0f172a";
+                ecgCtx.strokeStyle = "#000000";
                 canvasInitialized = true;
             }
         }
@@ -638,7 +636,6 @@
                 showToast("Successfully linked to patient!");
             });
 
-            // Catch Bluetooth Heart Rate (BPM) & fallback ECG if sent inside live_vitals
             socket.on('live_vitals', (data) => {
                 const toggle = document.getElementById('health-toggle');
                 if (toggle && toggle.checked) {
@@ -659,12 +656,11 @@
                             statusEl.innerText = "Streaming Live";
                             statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                         }
-                        drawECGWave(parseFloat(data.ecg_value));
+                        drawECGWave(parseFloat(data.ecg_value) * 1000);
                     }
                 }
             });
 
-            // Catch high-speed REAL ECG stream from the ESP32
             socket.on('live_real_ecg', (data) => {
                 const toggle = document.getElementById('health-toggle');
                 
@@ -674,14 +670,16 @@
                     }
 
                     const liveBpm = data.heart_rate ?? data.bpm;
-                    if (liveBpm !== undefined && liveBpm > 0) {
+                    if (liveBpm !== undefined && liveBpm !== null && liveBpm > 0) {
                         document.getElementById('ppg-bpm').innerText = Math.round(liveBpm);
                     }
 
                     document.getElementById('ecg-status').innerText = "Streaming Live";
                     document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                     
-                    const valToPlot = data.mv_ecg !== undefined ? parseFloat(data.mv_ecg) : parseFloat(data.raw_ecg);
+                    const valToPlot = data.raw_ecg !== undefined
+                        ? parseFloat(data.raw_ecg)
+                        : parseFloat(data.mv_ecg) * 1000;
                     drawECGWave(valToPlot);
                 }
             });
@@ -943,42 +941,37 @@
         }
 
         // ==========================================
-        // DYNAMIC ECG DRAWING FUNCTION (AUTO-SCALING)
+        // DYNAMIC ECG DRAWING FUNCTION (MATCHES PATIENT)
         // ==========================================
         function drawECGWave(value) {
             if (isNaN(value)) return;
             if (!canvasInitialized || ecgCanvas.width === 0) initCanvas();
             if (!canvasInitialized || ecgCanvas.width === 0) return;
 
-            // 1. Gentle baseline tracking
             if (jsBaseline === 0) jsBaseline = value;
-            jsBaseline += (value - jsBaseline) * 0.01;
+            jsBaseline += (value - jsBaseline) * 0.05;
             let centeredValue = value - jsBaseline;
 
-            // 2. Slow auto-gain decay so flatlines stay flat and R-peaks stay sharp
-            maxPeak = Math.max(Math.abs(centeredValue), maxPeak * 0.999, 0.5);
-            let scale = (ecgCanvas.height * 0.38) / maxPeak;
-            let newY = (ecgCanvas.height / 2) - (centeredValue * scale);
+            let scale = ecgCanvas.height / 1500;
+            let newY = (ecgCanvas.height / 2) + (centeredValue * scale);
+            newY = Math.max(4, Math.min(ecgCanvas.height - 4, newY));
 
-            // Clamp inside visible box
-            newY = Math.max(6, Math.min(ecgCanvas.height - 6, newY));
-
-            // 3. Draw crisp black medical trace
-            ecgCtx.strokeStyle = "#0f172a";
-            ecgCtx.lineWidth = 1.6;
+            ecgCtx.strokeStyle = "#000000";
+            ecgCtx.lineWidth = 1.5;
+            ecgCtx.lineJoin = "round";
             ecgCtx.beginPath();
             ecgCtx.moveTo(ecgX, lastEcgY);
-            ecgCtx.lineTo(ecgX + 1.5, newY);
+            ecgCtx.lineTo(ecgX + 2, newY);
             ecgCtx.stroke();
 
             lastEcgY = newY;
-            ecgX += 1.5;
+            ecgX += 2;
 
-            // 4. Sweep & wrap
-            ecgCtx.clearRect(ecgX, 0, 12, ecgCanvas.height);
+            ecgCtx.clearRect(ecgX, 0, 10, ecgCanvas.height);
+
             if (ecgX >= ecgCanvas.width) {
                 ecgX = 0;
-                ecgCtx.clearRect(0, 0, 12, ecgCanvas.height);
+                ecgCtx.clearRect(0, 0, 10, ecgCanvas.height);
             }
         }
     </script>
