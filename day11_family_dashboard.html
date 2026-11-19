@@ -281,7 +281,7 @@
             </button>
             
             <div class="flex items-center space-x-4">
-                <div id="gps-status-indicator" class="flex items-center space-x-1 text-slate-400 text-xs font-bold bg-slate-800 px-2 py-1 rounded transition-colors duration-300">
+                <div id="profile-gps-status-indicator" class="flex items-center space-x-1 text-slate-400 text-xs font-bold bg-slate-800 px-2 py-1 rounded transition-colors duration-300">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
                     <span>Location: OFF (Saving Battery)</span>
                 </div>
@@ -422,14 +422,14 @@
         const apiKey = ""; 
 
         // ==========================================
-        // ECG CANVAS VARIABLES
+        // ECG CANVAS VARIABLES (MATCHING PATIENT)
         // ==========================================
         let ecgCanvas, ecgCtx;
         let ecgX = 0;
         let lastEcgY = 0;
         let jsBaseline = 0;
         let canvasInitialized = false;
-        
+
         function initCanvas() {
             ecgCanvas = document.getElementById('familyEcgCanvas');
             if (ecgCanvas && ecgCanvas.offsetWidth > 0 && ecgCanvas.offsetHeight > 0) {
@@ -442,6 +442,7 @@
                 ecgCtx.lineWidth = 1.5;
                 ecgCtx.lineJoin = "round";
                 ecgCtx.strokeStyle = "#000000";
+                ecgCtx.shadowBlur = 0;
                 canvasInitialized = true;
             }
         }
@@ -899,7 +900,7 @@
             if (gpsActive) return; 
             gpsActive = true;
             
-            const gpsInd = document.getElementById('gps-status-indicator');
+            const gpsInd = document.getElementById('profile-gps-status-indicator');
             if (gpsInd) {
                 gpsInd.className = "flex items-center space-x-1 text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded animate-pulse";
                 gpsInd.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg><span>Location: ACTIVE</span>`;
@@ -941,7 +942,7 @@
         }
 
         // ==========================================
-        // DYNAMIC ECG DRAWING FUNCTION (MATCHES PATIENT)
+        // DYNAMIC ECG DRAWING FUNCTION (PATIENT MATCH)
         // ==========================================
         function drawECGWave(value) {
             if (isNaN(value)) return;
@@ -954,11 +955,12 @@
 
             let scale = ecgCanvas.height / 1500;
             let newY = (ecgCanvas.height / 2) + (centeredValue * scale);
-            newY = Math.max(4, Math.min(ecgCanvas.height - 4, newY));
 
-            ecgCtx.strokeStyle = "#000000";
             ecgCtx.lineWidth = 1.5;
             ecgCtx.lineJoin = "round";
+            ecgCtx.strokeStyle = "#000000";
+            ecgCtx.shadowBlur = 0;
+
             ecgCtx.beginPath();
             ecgCtx.moveTo(ecgX, lastEcgY);
             ecgCtx.lineTo(ecgX + 2, newY);
