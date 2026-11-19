@@ -441,14 +441,13 @@
                 lastEcgY = ecgCanvas.height / 2;
                 jsBaseline = 0;
                 maxPeak = 10;
-                ecgCtx.lineWidth = 2.0;
+                ecgCtx.lineWidth = 1.6;
                 ecgCtx.lineJoin = "round";
-                ecgCtx.strokeStyle = "#dc2626";
+                ecgCtx.strokeStyle = "#0f172a";
                 canvasInitialized = true;
             }
         }
 
-        // Re-size canvas cleanly if screen rotates or resizes
         window.addEventListener('resize', () => {
             const toggle = document.getElementById('health-toggle');
             if (toggle && toggle.checked) {
@@ -607,10 +606,11 @@
 
         function connectToPatient(pId) {
             if (!socket) return;
+            const cleanId = String(pId).trim().toUpperCase();
             socket.emit('join_system', { 
-                room: 'room_' + pId,
+                room: 'room_' + cleanId,
                 role: 'family',
-                patient_id: pId,
+                patient_id: cleanId,
                 name: fName,
                 mobile: fMobile,
                 address: fAddress 
@@ -642,20 +642,20 @@
             socket.on('live_vitals', (data) => {
                 const toggle = document.getElementById('health-toggle');
                 if (toggle && toggle.checked) {
-                    if (data.heart_rate !== undefined) {
-                        document.getElementById('ppg-bpm').innerText = data.heart_rate;
+                    const bpmVal = data.heart_rate ?? data.bpm;
+                    if (bpmVal !== undefined && bpmVal > 0) {
+                        document.getElementById('ppg-bpm').innerText = Math.round(bpmVal);
                     }
 
                     const statusEl = document.getElementById('ecg-status');
-                    if (data.heart_rate >= 120) {
+                    if (bpmVal >= 120) {
                         statusEl.innerText = "Elevated Heart Rate";
                         statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
                     }
 
-                    // Fallback: draw if backend sends ecg_value inside live_vitals
                     if (data.ecg_value !== undefined) {
                         document.getElementById('ecg-mv').innerText = data.ecg_value;
-                        if (data.heart_rate < 120 || data.heart_rate === undefined) {
+                        if (!(bpmVal >= 120)) {
                             statusEl.innerText = "Streaming Live";
                             statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                         }
@@ -672,10 +672,16 @@
                     if (data.mv_ecg !== undefined) {
                         document.getElementById('ecg-mv').innerText = data.mv_ecg;
                     }
+
+                    const liveBpm = data.heart_rate ?? data.bpm;
+                    if (liveBpm !== undefined && liveBpm > 0) {
+                        document.getElementById('ppg-bpm').innerText = Math.round(liveBpm);
+                    }
+
                     document.getElementById('ecg-status').innerText = "Streaming Live";
                     document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                     
-                    const valToPlot = data.raw_ecg !== undefined ? parseFloat(data.raw_ecg) : parseFloat(data.mv_ecg);
+                    const valToPlot = data.mv_ecg !== undefined ? parseFloat(data.mv_ecg) : parseFloat(data.raw_ecg);
                     drawECGWave(valToPlot);
                 }
             });
@@ -744,7 +750,6 @@
                 document.getElementById('ecg-status').innerText = "Awaiting data...";
                 document.getElementById('ecg-status').className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                 
-                // Wait 1 frame so the hidden container has real pixel dimensions
                 requestAnimationFrame(() => {
                     canvasInitialized = false;
                     initCanvas();
@@ -945,37 +950,35 @@
             if (!canvasInitialized || ecgCanvas.width === 0) initCanvas();
             if (!canvasInitialized || ecgCanvas.width === 0) return;
 
-            // 1. Dynamic Auto-Centering
+            // 1. Gentle baseline tracking
             if (jsBaseline === 0) jsBaseline = value;
-            jsBaseline += (value - jsBaseline) * 0.05;
+            jsBaseline += (value - jsBaseline) * 0.01;
             let centeredValue = value - jsBaseline;
 
-            // 2. Auto-gain so both raw_ecg and mv_ecg fit cleanly inside the box
-            maxPeak = Math.max(Math.abs(centeredValue), maxPeak * 0.995, 1);
-            let scale = (ecgCanvas.height * 0.42) / maxPeak;
+            // 2. Slow auto-gain decay so flatlines stay flat and R-peaks stay sharp
+            maxPeak = Math.max(Math.abs(centeredValue), maxPeak * 0.999, 0.5);
+            let scale = (ecgCanvas.height * 0.38) / maxPeak;
             let newY = (ecgCanvas.height / 2) - (centeredValue * scale);
 
-            // Clamp inside visible canvas
-            newY = Math.max(4, Math.min(ecgCanvas.height - 4, newY));
+            // Clamp inside visible box
+            newY = Math.max(6, Math.min(ecgCanvas.height - 6, newY));
 
-            // 3. Draw the line segment
-            ecgCtx.strokeStyle = "#dc2626";
-            ecgCtx.lineWidth = 2.0;
+            // 3. Draw crisp black medical trace
+            ecgCtx.strokeStyle = "#0f172a";
+            ecgCtx.lineWidth = 1.6;
             ecgCtx.beginPath();
             ecgCtx.moveTo(ecgX, lastEcgY);
-            ecgCtx.lineTo(ecgX + 2, newY);
+            ecgCtx.lineTo(ecgX + 1.5, newY);
             ecgCtx.stroke();
 
             lastEcgY = newY;
-            ecgX += 2;
+            ecgX += 1.5;
 
-            // 4. Sweep Effect (clear ahead of the line)
-            ecgCtx.clearRect(ecgX, 0, 15, ecgCanvas.height);
-
-            // 5. Wrap around to the left edge
+            // 4. Sweep & wrap
+            ecgCtx.clearRect(ecgX, 0, 12, ecgCanvas.height);
             if (ecgX >= ecgCanvas.width) {
                 ecgX = 0;
-                ecgCtx.clearRect(0, 0, 15, ecgCanvas.height);
+                ecgCtx.clearRect(0, 0, 12, ecgCanvas.height);
             }
         }
     </script>
