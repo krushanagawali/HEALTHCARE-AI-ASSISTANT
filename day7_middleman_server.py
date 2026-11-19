@@ -43,9 +43,12 @@ init_db()
 # ==========================================
 @socketio.on('join_system')
 def on_join(data):
-    room_name = data.get('room')
-    role = data.get('role')
-    join_room(room_name)
+    role = str(data.get('role', '')).strip().lower()
+    patient_id = str(data.get('patient_id', '')).strip().upper()
+    room_name = f'room_{patient_id}' if patient_id else str(data.get('room', '')).strip()
+
+    if room_name:
+        join_room(room_name)
     print(f"🔒 {role.upper()} connected to channel: {room_name}")
 
     conn = sqlite3.connect('hospital.db')
@@ -64,7 +67,6 @@ def on_join(data):
         print(f"🩺 Doctor {name} saved to database.")
 
     elif role == 'patient':
-        patient_id = data.get('patient_id')
         name = data.get('name')
         mobile = data.get('mobile')
         address = data.get('address', 'N/A')
@@ -76,10 +78,9 @@ def on_join(data):
         existing_family = c.fetchall()
         
         socketio.emit('existing_family', existing_family, to=request.sid)
-        print(f"🫀 Patient {name} activated. Restored {len(existing_family)} family links.")
+        print(f"🫀 Patient {name} ({patient_id}) activated. Restored {len(existing_family)} family links.")
 
     elif role == 'family':
-        patient_id = data.get('patient_id')
         name = data.get('name')
         mobile = data.get('mobile')
         address = data.get('address', 'N/A')
@@ -100,7 +101,7 @@ def on_join(data):
                 'patient_mobile': patient[1],
                 'patient_address': patient[2]
             }, to=request.sid)
-            print(f"👨‍👩‍👧 Family member {name} linked to patient {patient[0]}")
+            print(f"👨‍👩‍👧 Family member {name} linked to patient {patient[0]} in {room_name}")
         else:
             socketio.emit('link_error', {'message': 'Patient ID not found! Patient must activate their wearable first.'}, to=request.sid)
             print(f"❌ Rejected family login: Patient {patient_id} does not exist.")
@@ -109,45 +110,16 @@ def on_join(data):
     conn.close()
 
 # ==========================================
-# 3. LIVE WEARABLE VITALS TELEMETRY (NEW)
+# 3. LIVE WEARABLE VITALS TELEMETRY
 # ==========================================
-# @app.route('/update_vitals', methods=['POST'])
-# def update_vitals():
-#     """Receives live heart rate from ble_reader.py and broadcasts it immediately."""
-#     incoming = request.get_json(force=True, silent=True) or {}
-    
-#     patient_id = incoming.get('patient_id', 'PATIENT_DEFAULT')
-#     heart_rate = incoming.get('heart_rate')
-    
-#     if heart_rate is None:
-#         return jsonify({"error": "Missing heart_rate"}), 400
-
-#     payload = {
-#         "patient_id": patient_id,
-#         "heart_rate": int(heart_rate),
-#         "status": incoming.get('status', 'nominal'),
-#         "timestamp": incoming.get('timestamp')
-#     }
-
-#     # Store in memory for instant polling
-#     latest_vitals_cache[patient_id] = payload
-
-#     # Broadcast to patient room and doctor channel via WebSockets
-#     socketio.emit('live_vitals', payload, to=f'room_{patient_id}')
-#     socketio.emit('live_vitals', payload, to='room_doctors')
-
-#     return jsonify({"status": "success", "received": payload}), 200
-
 @app.route('/update_vitals', methods=['POST'])
 def update_vitals():
     """Receives live vitals from ble_reader.py or ESP32 and broadcasts immediately."""
     incoming = request.get_json(force=True, silent=True) or {}
     
-    patient_id = incoming.get('patient_id', 'PATIENT_DEFAULT')
+    patient_id = str(incoming.get('patient_id', 'PATIENT_DEFAULT')).strip().upper()
     heart_rate = incoming.get('heart_rate')
-    
-    # NEW: Extract the ecg_value from the incoming POST request
-    ecg_value = incoming.get('ecg_value') 
+    ecg_value = incoming.get('ecg_value')
     
     if heart_rate is None:
         return jsonify({"error": "Missing heart_rate"}), 400
@@ -155,16 +127,16 @@ def update_vitals():
     payload = {
         "patient_id": patient_id,
         "heart_rate": int(heart_rate),
-        "ecg_value": ecg_value,  # NEW: Add it to the broadcast payload
+        "ecg_value": ecg_value,
         "status": incoming.get('status', 'nominal'),
         "timestamp": incoming.get('timestamp')
     }
 
-    # Store in memory for instant polling
     latest_vitals_cache[patient_id] = payload
 
-    # Broadcast to patient room and doctor channel via WebSockets
-    socketio.emit('live_vitals', payload, to=f'room_{patient_id}')
+    target_room = f'room_{patient_id}'
+    print(f"💓 Broadcasting live_vitals to {target_room}: HR={payload['heart_rate']}, ECG={ecg_value}")
+    socketio.emit('live_vitals', payload, to=target_room)
     socketio.emit('live_vitals', payload, to='room_doctors')
 
     return jsonify({"status": "success", "received": payload}), 200
@@ -172,10 +144,11 @@ def update_vitals():
 @app.route('/get_vitals/<patient_id>', methods=['GET'])
 def get_vitals(patient_id):
     """Fallback endpoint for frontends polling vitals via HTTP."""
-    data = latest_vitals_cache.get(patient_id)
+    clean_id = str(patient_id).strip().upper()
+    data = latest_vitals_cache.get(clean_id)
     if data:
         return jsonify(data), 200
-    return jsonify({"patient_id": patient_id, "heart_rate": 0, "status": "waiting_for_signal"}), 200
+    return jsonify({"patient_id": clean_id, "heart_rate": 0, "status": "waiting_for_signal"}), 200
 
 # ==========================================
 # 4. ROUTING THE EMERGENCY DISPATCH
@@ -187,7 +160,7 @@ def receive_emergency():
     if incoming_data.get('token') != SECRET_KEY:
         return jsonify({"error": "Unauthorized"}), 403
     
-    patient_id = incoming_data.get('patient_id')
+    patient_id = str(incoming_data.get('patient_id', '')).strip().upper()
     print(f"\n🚨 [SERVER] RECEIVED STEMI ALERT FOR {patient_id}!")
     
     socketio.emit('stemi_alert', incoming_data, to=f'room_{patient_id}')
@@ -201,12 +174,12 @@ def handle_dispatch():
     socketio.emit('ambulance_dispatched')
 
 # ==========================================
-# 5. SESSION VERIFICATION (FIXED SYNTAX)
+# 5. SESSION VERIFICATION
 # ==========================================
 @app.route('/verify_session', methods=['POST'])
 def verify():
     data = request.json or {}
-    patient_id = data.get('patient_id')
+    patient_id = str(data.get('patient_id', '')).strip().upper()
 
     conn = sqlite3.connect('hospital.db')
     c = conn.cursor()
@@ -227,20 +200,22 @@ def verify():
 
     return jsonify({"status": "not_found", "profile": None}), 404
 
-
 # ==========================================
-# 7. HIGH-SPEED REAL ECG RELAY
+# 6. HIGH-SPEED REAL ECG RELAY
 # ==========================================
 @socketio.on('stream_real_ecg')
 def handle_real_ecg(data):
-    """Instantly relays the real ESP32 ECG wave from Patient to Family"""
-    patient_id = data.get('patient_id')
+    """Instantly relays the real ESP32 ECG wave from Patient to Family."""
+    patient_id = str(data.get('patient_id', '')).strip().upper()
     if patient_id:
-        # Broadcast exclusively to the specific patient's room
-        socketio.emit('live_real_ecg', data, to=f'room_{patient_id}')
-        
+        target_room = f'room_{patient_id}'
+        print(f"📡 Relaying ECG to {target_room}: raw={data.get('raw_ecg')}, mv={data.get('mv_ecg')}")
+        socketio.emit('live_real_ecg', data, to=target_room)
+    else:
+        print("⚠️ stream_real_ecg received WITHOUT patient_id:", data)
+
 # ==========================================
-# 6. RUNNER (RENDER-AWARE PORT)
+# 7. RUNNER (RENDER-AWARE PORT)
 # ==========================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
