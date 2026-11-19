@@ -118,27 +118,6 @@
                 </div>
             </div>
 
-            <!-- PPG Sensor Reading -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md flex flex-col">
-                <div class="flex justify-between items-center w-full mb-4">
-                    <div>
-                        <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider mb-1">PPG Sensor Reading</h3>
-                        <div class="flex items-baseline space-x-2">
-                            <span id="ppg-bpm" class="text-4xl font-mono font-bold text-white">--</span>
-                            <span class="text-slate-500 font-bold">BPM</span>
-                        </div>
-                    </div>
-                    <div class="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center animate-pulse">
-                        <svg class="w-8 h-8 text-rose-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    </div>
-                </div>
-                
-                <button id="connectWatchBtn" onclick="connectFireBoltt()" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition border border-slate-700 hover:border-emerald-500 mt-2">
-                    🔗 Connect Fire-Boltt Watch
-                </button>
-                <p id="connectionStatus" class="text-xs text-slate-500 text-center mt-3 font-medium">Status: Disconnected</p>
-            </div>
-
             <!-- ECG Sensor Reading -->
             <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                 <div class="flex justify-between items-center mb-4">
@@ -179,7 +158,7 @@
                         <p class="text-2xl font-mono text-white"><span id="hrv-value">--</span> <span class="text-sm text-slate-500 font-sans">ms</span></p>
                     </div>
                     <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                        <p class="text-xs text-slate-400 mb-1">Rhythm Status</p>
+                        <p class="text-xs text-slate-400 mb-1">Live Rhythm Status</p>
                         <p id="arrhythmia-status" class="text-sm font-bold text-slate-500 mt-2">Awaiting Data</p>
                     </div>
                 </div>
@@ -204,7 +183,7 @@
                 <div id="alert-state" class="hidden">
                     <div class="bg-red-950 border-2 border-red-500 rounded-3xl p-6 patient-alert-pulse shadow-2xl text-center">
                         <h2 class="text-3xl font-extrabold text-red-500 tracking-tight mb-2">HELP IS ON THE WAY</h2>
-                        <p class="text-red-200 text-lg mb-6">We detected an anomaly. Medical team notified.</p>
+                        <p class="text-red-200 text-lg mb-6">Live ECG anomaly detected. Medical team notified.</p>
                         
                         <div class="bg-black/40 rounded-xl p-4 border border-red-900/50 mb-6">
                             <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Status</h3>
@@ -349,7 +328,6 @@
         let pMobile = "";
         let pAddress = "";
         let familyCounter = 1;
-        let watchConnected = false; 
         let latestCalculatedBpm = null;
 
         const apiKey = ""; 
@@ -369,12 +347,31 @@
                 ecgCtx = ecgCanvas.getContext('2d');
                 ecgCanvas.width = ecgCanvas.offsetWidth;
                 ecgCanvas.height = ecgCanvas.offsetHeight;
+                ecgX = 0;
                 lastEcgY = ecgCanvas.height / 2;
+                jsBaseline = 0;
                 ecgCtx.lineWidth = 1.5;
                 ecgCtx.lineJoin = "round";
                 ecgCtx.strokeStyle = "#000000"; 
                 ecgCtx.shadowBlur = 0; 
                 canvasInitialized = true;
+            }
+        }
+
+        // ==========================================
+        // LIVE-ONLY ANALYTICS BUFFER RESET
+        // ==========================================
+        function resetLiveAnalyticsBuffer() {
+            ecgHistory = [];
+            rrIntervals = [];
+            lastPeakTime = Date.now();
+            latestCalculatedBpm = null;
+            jsBaseline = 0;
+            document.getElementById('hrv-value').innerText = "--";
+            const arrEl = document.getElementById('arrhythmia-status');
+            if (arrEl) {
+                arrEl.innerText = "Awaiting Data";
+                arrEl.className = "text-sm font-bold text-slate-500 mt-2";
             }
         }
 
@@ -595,13 +592,14 @@
                     <div class="w-8 h-8 bg-emerald-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1">
                         <span class="text-white text-xs animate-pulse">...</span>
                     </div>
-                    <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-400 text-sm italic border border-slate-700">Analyzing metrics...</div>
+                    <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-400 text-sm italic border border-slate-700">Analyzing live ECG metrics...</div>
                 </div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            const currentBPM = document.getElementById('ppg-bpm').innerText;
+            const currentBpmLabel = latestCalculatedBpm ? `${latestCalculatedBpm} BPM` : "Awaiting live beat";
             const currentECG = document.getElementById('ecg-status').innerText;
-            const prompt = `You are a helpful AI Assistant in a smart wearable app. Live heart rate: ${currentBPM}, ECG: ${currentECG}. Response brief (2-3 sentences). Question: "${msg}"`;
+            const currentRhythm = document.getElementById('arrhythmia-status').innerText;
+            const prompt = `You are a helpful AI Assistant in a smart wearable ECG app. Live ECG status: ${currentECG}, live rhythm: ${currentRhythm}, live beat estimate: ${currentBpmLabel}. Response brief (2-3 sentences). Question: "${msg}"`;
 
             try {
                 const result = await fetchGeminiResponse(prompt);
@@ -644,7 +642,7 @@
             document.getElementById('alert-state').classList.remove('hidden');
             let audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
             audio.play().catch(e => console.log(e));
-            document.getElementById('ecg-status').innerText = "ST-Elevation (CRITICAL)";
+            document.getElementById('ecg-status').innerText = "CRITICAL (Live Anomaly)";
             document.getElementById('ecg-status').className = "text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold";
             startGPS();
         }
@@ -673,85 +671,6 @@
         }
 
         // ==========================================
-        // WEB BLUETOOTH API (FIRE-BOLTT CONNECTION)
-        // ==========================================
-        const HR_SERVICE_UUID = 0x180D; 
-        const HR_CHAR_UUID    = 0x2A37; 
-        const RENDER_ENDPOINT = "https://healthcare-ai-assistant-d3p8.onrender.com/update_vitals";
-
-        async function connectFireBoltt() {
-            const statusText = document.getElementById("connectionStatus");
-            const bpmDisplay = document.getElementById("ppg-bpm");
-            const connectBtn = document.getElementById("connectWatchBtn");
-
-            if (!navigator.bluetooth) {
-                alert("Web Bluetooth is not supported on this browser. Please open in Google Chrome on Android.");
-                return;
-            }
-
-            try {
-                statusText.innerText = "Status: Scanning for Fire-Boltt...";
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'FB' }],
-                    optionalServices: [HR_SERVICE_UUID, 'heart_rate', 0x180D]
-                });
-
-                statusText.innerText = "Status: Connecting to " + device.name + "...";
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(HR_SERVICE_UUID);
-                const characteristic = await service.getCharacteristic(HR_CHAR_UUID);
-
-                await characteristic.startNotifications();
-                
-                statusText.innerText = "Status: Connected & Streaming Live!";
-                statusText.style.color = "#34d399"; 
-                connectBtn.style.display = "none";
-                watchConnected = true; 
-
-                characteristic.addEventListener('characteristicvaluechanged', (event) => {
-                    const dataView = event.target.value;
-                    const flags = dataView.getUint8(0);
-                    
-                    let bpm = 0;
-                    if ((flags & 0x01) === 0) {
-                        bpm = dataView.getUint8(1);
-                    } else {
-                        bpm = dataView.getUint16(1, true);
-                    }
-
-                    if (!canvasInitialized) {
-                        bpmDisplay.innerText = bpm;
-                    }
-
-                    if (currentPatientId) {
-                        fetch(RENDER_ENDPOINT, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                patient_id: currentPatientId,
-                                heart_rate: bpm,
-                                status: bpm >= 120 ? "elevated" : "nominal",
-                                timestamp: new Date().toLocaleTimeString()
-                            })
-                        }).catch(err => console.log("Render dispatch skipped/error:", err));
-                    }
-                });
-
-                device.addEventListener('gattserverdisconnected', () => {
-                    statusText.innerText = "Status: Watch Disconnected";
-                    statusText.style.color = "#f87171"; 
-                    connectBtn.style.display = "block";
-                    watchConnected = false;
-                });
-
-            } catch (error) {
-                console.error("Bluetooth connection error:", error);
-                statusText.innerText = "Status: Connection Failed or Cancelled";
-                statusText.style.color = "#f87171";
-            }
-        }
-
-        // ==========================================
         // WEB SERIAL API (ESP32-C3 USB CONNECTION)
         // ==========================================
         async function connectESP32USB() {
@@ -765,6 +684,7 @@
                 await port.open({ baudRate: 115200 });
                 
                 await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+                resetLiveAnalyticsBuffer();
                 
                 document.getElementById('connectEcgUsbBtn').innerText = "✅ USB Connected";
                 document.getElementById('connectEcgUsbBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
@@ -846,6 +766,7 @@
                 const characteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
 
                 await characteristic.startNotifications();
+                resetLiveAnalyticsBuffer();
                 
                 document.getElementById('connectEcgBleBtn').innerText = "✅ Bluetooth Connected";
                 document.getElementById('connectEcgBleBtn').classList.replace('bg-slate-800', 'bg-blue-600');
@@ -899,8 +820,8 @@
         // DYNAMIC ECG DRAWING FUNCTION
         // ==========================================
         function drawECGWave(value) {
-            if (!canvasInitialized) initCanvas();
-            if (!canvasInitialized) return;
+            if (!canvasInitialized || ecgCanvas.width === 0) initCanvas();
+            if (!canvasInitialized || ecgCanvas.width === 0) return;
 
             if (jsBaseline === 0) jsBaseline = value;
             jsBaseline += (value - jsBaseline) * 0.05; 
@@ -926,7 +847,7 @@
         }
 
         // ==========================================
-        // CLINICAL ANALYTICS ENGINE (ML, EXPORT & LIVE CHART)
+        // CLINICAL ANALYTICS ENGINE (LIVE-ONLY)
         // ==========================================
         let ecgHistory = [];
         let rrIntervals = [];
@@ -941,6 +862,9 @@
             const now = Date.now();
             ecgHistory.push(val);
             if (ecgHistory.length > 150) ecgHistory.shift(); 
+
+            // Need at least 25 live samples before evaluating signal quality or peaks
+            if (ecgHistory.length < 25) return;
 
             let maxV = Math.max(...ecgHistory);
             let minV = Math.min(...ecgHistory);
@@ -960,23 +884,25 @@
                 let rr = now - lastPeakTime;
                 lastPeakTime = now;
                 
-                rrIntervals.push(rr);
-                if (rrIntervals.length > 20) rrIntervals.shift();
-                
-                let realBpm = Math.round(60000 / rr);
-                if (realBpm > 40 && realBpm < 220) {
-                    latestCalculatedBpm = realBpm;
-                    document.getElementById('ppg-bpm').innerText = realBpm;
-                    
-                    if (now - lastChartUpdate > 10000 && chartInstance) {
-                        liveChartData.shift();
-                        liveChartData.push(realBpm);
-                        chartInstance.update();
-                        lastChartUpdate = now;
+                // Only record valid live beat intervals
+                if (rr >= 350 && rr <= 2000) {
+                    rrIntervals.push(rr);
+                    if (rrIntervals.length > 12) rrIntervals.shift();
+
+                    let realBpm = Math.round(60000 / rr);
+                    if (realBpm > 40 && realBpm < 220) {
+                        latestCalculatedBpm = realBpm;
+                        if (now - lastChartUpdate > 10000 && chartInstance) {
+                            liveChartData.shift();
+                            liveChartData.push(realBpm);
+                            chartInstance.update();
+                            lastChartUpdate = now;
+                        }
                     }
                 }
 
-                if (rrIntervals.length > 3) {
+                // Require at least 6 fresh live intervals in this stream before declaring critical/irregular
+                if (rrIntervals.length >= 6) {
                     let sumSq = 0;
                     let arrhythmiaCount = 0;
                     for (let i = 1; i < rrIntervals.length; i++) {
@@ -989,7 +915,7 @@
 
                     const arrEl = document.getElementById('arrhythmia-status');
                     if (arrhythmiaCount >= 3) {
-                        arrEl.innerText = "Irregular (AFib Risk)";
+                        arrEl.innerText = "CRITICAL (Live Irregular)";
                         arrEl.className = "text-sm font-bold text-rose-500 mt-2 animate-pulse";
                         
                         if (document.getElementById('alert-state').classList.contains('hidden')) {
@@ -1058,12 +984,12 @@
             doc.text(`Date & Time: ${new Date().toLocaleString()}`, 15, 46);
             
             let currentHRV = document.getElementById('hrv-value').innerText;
-            let currentBPM = document.getElementById('ppg-bpm').innerText;
+            let currentBpmText = latestCalculatedBpm ? `${latestCalculatedBpm} BPM` : "Awaiting live beat";
             let rhythm = document.getElementById('arrhythmia-status').innerText;
             
             doc.setFontSize(11);
             doc.setTextColor(100);
-            doc.text(`Avg Heart Rate: ${currentBPM} BPM`, 180, 30);
+            doc.text(`Live Beat Estimate: ${currentBpmText}`, 180, 30);
             doc.text(`Heart Rate Variability: ${currentHRV} ms`, 180, 38);
             doc.setTextColor(rhythm.includes("Normal") ? 34 : 225, rhythm.includes("Normal") ? 197 : 29, 94); 
             doc.text(`Diagnosis: ${rhythm}`, 180, 46);
