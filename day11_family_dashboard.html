@@ -66,7 +66,6 @@
     <!-- 1. LOGIN & ACTIVATION SCREEN               -->
     <!-- ========================================== -->
     <div id="login-view" class="w-full max-w-md mt-12 p-6 flex flex-col items-center transition-all duration-300">
-        <!-- Profile Icon Symbol -->
         <div class="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6 border-4 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)]">
             <svg class="w-12 h-12 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         </div>
@@ -74,13 +73,11 @@
         <h1 class="text-2xl font-bold text-white mb-8">Family Setup</h1>
 
         <div class="w-full space-y-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-            <!-- Full Name -->
             <div>
                 <label class="block text-slate-400 text-sm font-bold mb-2">Full Name</label>
                 <input type="text" id="family-name" placeholder="e.g. Jane Doe" class="w-full bg-slate-800 text-white rounded-xl p-4 border border-slate-700 focus:border-indigo-500 outline-none">
             </div>
             
-            <!-- Mobile Number with Dropdown -->
             <div>
                 <label class="block text-slate-400 text-sm font-bold mb-2">Mobile No.</label>
                 <div class="flex">
@@ -93,7 +90,6 @@
                 </div>
             </div>
 
-            <!-- Home Address -->
             <div>
                 <label class="block text-slate-400 text-sm font-bold mb-2">Home Address</label>
                 <textarea id="family-address" rows="2" placeholder="Enter your full home address" class="w-full bg-slate-800 text-white rounded-xl p-4 border border-slate-700 focus:border-indigo-500 outline-none"></textarea>
@@ -150,7 +146,7 @@
                 <div class="flex justify-between items-center">
                     <div>
                         <h2 class="text-white font-bold text-lg">See Live Patient Health</h2>
-                        <p class="text-slate-400 text-xs">View real-time heart metrics</p>
+                        <p class="text-slate-400 text-xs">View real-time ECG waveform</p>
                     </div>
                     <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                         <input type="checkbox" name="toggle" id="health-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-all duration-300" onclick="toggleHealthData()"/>
@@ -159,19 +155,6 @@
                 </div>
 
                 <div id="live-health-data" class="hidden mt-6 space-y-4 pt-4 border-t border-slate-800">
-                    <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl">
-                        <div>
-                            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">PPG Sensor Reading</h3>
-                            <div class="flex items-baseline space-x-2">
-                                <span id="ppg-bpm" class="text-3xl font-mono font-bold text-white">--</span>
-                                <span class="text-slate-500 font-bold">BPM</span>
-                            </div>
-                        </div>
-                        <div class="w-12 h-12 bg-rose-500/20 rounded-full flex items-center justify-center animate-pulse">
-                            <svg class="w-6 h-6 text-rose-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                        </div>
-                    </div>
-
                     <!-- ECG Sensor Reading -->
                     <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-md">
                         <div class="flex justify-between items-center mb-4">
@@ -375,13 +358,12 @@
         </header>
         
         <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-            <!-- AI Welcome Message -->
             <div class="flex items-start mb-4">
                 <div class="w-8 h-8 bg-indigo-600 rounded-full flex-shrink-0 flex items-center justify-center mr-3 mt-1 shadow-[0_0_10px_rgba(99,102,241,0.5)]">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </div>
                 <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-slate-300 text-sm max-w-[85%] border border-slate-700">
-                    Hello! I am your AI Health Assistant. I am monitoring your loved one's smartwatch metrics. How can I help you today?
+                    Hello! I am your AI Health Assistant. I am monitoring your loved one's live ECG metrics. How can I help you today?
                 </div>
             </div>
         </div>
@@ -418,6 +400,7 @@
         let liveHealthInterval = null;
         let html5QrcodeScanner = null;
         let gpsActive = false;
+        let latestPatientBpm = null;
 
         const apiKey = ""; 
 
@@ -642,21 +625,14 @@
                 if (toggle && toggle.checked) {
                     const bpmVal = data.heart_rate ?? data.bpm;
                     if (bpmVal !== undefined && bpmVal > 0) {
-                        document.getElementById('ppg-bpm').innerText = Math.round(bpmVal);
+                        latestPatientBpm = Math.round(bpmVal);
                     }
 
                     const statusEl = document.getElementById('ecg-status');
-                    if (bpmVal >= 120) {
-                        statusEl.innerText = "Elevated Heart Rate";
-                        statusEl.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold transition-colors";
-                    }
-
                     if (data.ecg_value !== undefined) {
                         document.getElementById('ecg-mv').innerText = data.ecg_value;
-                        if (!(bpmVal >= 120)) {
-                            statusEl.innerText = "Streaming Live";
-                            statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
-                        }
+                        statusEl.innerText = "Streaming Live";
+                        statusEl.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold transition-colors";
                         drawECGWave(parseFloat(data.ecg_value) * 1000);
                     }
                 }
@@ -672,7 +648,7 @@
 
                     const liveBpm = data.heart_rate ?? data.bpm;
                     if (liveBpm !== undefined && liveBpm !== null && liveBpm > 0) {
-                        document.getElementById('ppg-bpm').innerText = Math.round(liveBpm);
+                        latestPatientBpm = Math.round(liveBpm);
                     }
 
                     document.getElementById('ecg-status').innerText = "Streaming Live";
@@ -756,7 +732,7 @@
             } else {
                 dataContainer.classList.add('hidden');
                 clearInterval(liveHealthInterval);
-                document.getElementById('ppg-bpm').innerText = "--";
+                latestPatientBpm = null;
                 document.getElementById('ecg-mv').innerText = "--";
             }
         }
@@ -827,12 +803,12 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             const isConnected = connectedPatientId ? "Yes" : "No";
-            const currentBPM = document.getElementById('ppg-bpm').innerText;
+            const currentBpmLabel = latestPatientBpm ? `${latestPatientBpm} BPM` : "Awaiting live beat";
             const currentECG = document.getElementById('ecg-status').innerText;
             
             const prompt = `You are a helpful, reassuring AI Health Assistant built into a family member's remote monitoring app. 
             The family member is monitoring their loved one. Connected to patient: ${isConnected}. 
-            The patient's current live heart rate is ${currentBPM} BPM. 
+            The patient's current live heart rate estimate is ${currentBpmLabel}. 
             Their current live ECG reading status is: "${currentECG}". 
             Keep your answer very brief (2-3 short sentences), highly supportive, and easy to understand. Do not use markdown symbols like asterisks. 
             The family member asks: "${msg}"`;
@@ -955,6 +931,7 @@
 
             let scale = ecgCanvas.height / 1500;
             let newY = (ecgCanvas.height / 2) + (centeredValue * scale);
+            newY = Math.max(2, Math.min(ecgCanvas.height - 2, newY));
 
             ecgCtx.lineWidth = 1.5;
             ecgCtx.lineJoin = "round";
